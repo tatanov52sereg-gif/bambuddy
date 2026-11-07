@@ -199,7 +199,7 @@ import { PrinterInfoModal } from '../components/PrinterInfoModal';
 import { FeedDirectionModal } from '../components/FeedDirectionModal';
 import { plateCheckFailureText } from '../utils/plateCheck';
 import { amsHasLoadedTray, getAmsLabel, getEmptySlotKind, getGlobalTrayId, getFillBarColor, getSpoolmanFillLevel, getFallbackSpoolTag, installedNozzleDiameters, isAmsHtUnit, isBambuLabSpool, trayForSlot, resolveSlotNozzleDiameter, resolveSlotExtruder, formatSlotLabel, slotPresetDescribesTray, FTS_INLET_SIDE } from '../utils/amsHelpers';
-import { MAX_CHAMBER_TEMP_C, getPrinterImage, getWifiStrength, filterCompatibleQueueItems, isPrinterCurrentlyDispatchable, IDLE_PRINTER_STATES } from '../utils/printer';
+import { MAX_CHAMBER_TEMP_C, getPrinterImage, getWifiStrength, filterCompatibleQueueItems, isPrinterCurrentlyDispatchable, IDLE_PRINTER_STATES, comparePrinterNames } from '../utils/printer';
 import { FilamentSlotCircle } from '../components/FilamentSlotCircle';
 import { Collapsible } from '../components/Collapsible';
 import { ConnectionDiagnosticModal, DiagnosticChecklist } from '../components/ConnectionDiagnostic';
@@ -9476,7 +9476,7 @@ export function PrintersPage() {
 
     switch (sortBy) {
       case 'name':
-        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        sorted.sort((a, b) => comparePrinterNames(a.name, b.name));
         break;
       case 'model':
         sorted.sort((a, b) => (a.model || '').localeCompare(b.model || ''));
@@ -9488,7 +9488,7 @@ export function PrintersPage() {
           const locB = b.location || '';
           if (!locA && locB) return 1;
           if (locA && !locB) return -1;
-          return locA.localeCompare(locB) || a.name.localeCompare(b.name);
+          return locA.localeCompare(locB) || comparePrinterNames(a.name, b.name);
         });
         break;
       case 'status':
@@ -9527,7 +9527,7 @@ export function PrintersPage() {
             const diff = (statusA!.remaining_time ?? 0) - (statusB!.remaining_time ?? 0);
             if (diff !== 0) return diff;
           }
-          return a.name.localeCompare(b.name);
+          return comparePrinterNames(a.name, b.name);
         });
         break;
     }

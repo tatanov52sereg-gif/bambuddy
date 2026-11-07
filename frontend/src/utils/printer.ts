@@ -18,6 +18,20 @@ export function getPrinterImage(model: string | null | undefined): string {
   return '/img/printers/default.png';
 }
 
+/**
+ * Compare printer names the way operators number a farm.
+ *
+ * Plain `localeCompare` walks character by character, so "A-1-10" sorts
+ * between "A-1-1" and "A-1-2" instead of after "A-1-9". Numeric collation
+ * compares runs of digits as numbers, keeping both zero-padded ("A-1-09")
+ * and bare ("A-1-9") names in the expected order. Name is the only sort key
+ * the Printers page has for manual ordering, so this is what puts a
+ * "…-10" printer at the end of the list.
+ */
+export function comparePrinterNames(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { numeric: true });
+}
+
 // Ceiling for every chamber-temperature target the UI accepts (manual set,
 // preheat filament map, per-item preheat override, chamber quick-select
 // presets). Mirrors backend MAX_CHAMBER_TEMP_C in

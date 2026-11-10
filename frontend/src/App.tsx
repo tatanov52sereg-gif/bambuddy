@@ -36,6 +36,7 @@ const ExternalLinkPage = lazyPage(() => import('./pages/ExternalLinkPage'), 'Ext
 const GroupEditPage = lazyPage(() => import('./pages/GroupEditPage'), 'GroupEditPage');
 const PrinterLocationsPage = lazyPage(() => import('./pages/PrinterLocationsPage'), 'PrinterLocationsPage');
 const InventoryPage = lazyPage(() => import('./pages/InventoryPage'), 'default');
+const OzonPage = lazyPage(() => import('./pages/OzonPage'), 'OzonPage');
 const ModelSourcesPage = lazyPage(() => import('./pages/ModelSourcesPage'), 'ModelSourcesPage');
 const SystemInfoPage = lazyPage(() => import('./pages/SystemInfoPage'), 'SystemInfoPage');
 const LoginPage = lazyPage(() => import('./pages/LoginPage'), 'LoginPage');
@@ -247,6 +248,7 @@ function App() {
                   <Route path="projects" element={<ProjectsPage />} />
                   <Route path="projects/:id" element={<ProjectDetailPage />} />
                   <Route path="inventory" element={<InventoryPage />} />
+                  <Route path="ozon" element={<PermissionRoute permission="inventory:read"><OzonPage /></PermissionRoute>} />
                   <Route path="files" element={<FileManagerPage />} />
                   <Route path="files/trash" element={<LibraryTrashPage />} />
                   <Route path="model-sources" element={<PermissionRoute permission={['makerworld:view', 'manyfold:view']}><ModelSourcesPage /></PermissionRoute>} />

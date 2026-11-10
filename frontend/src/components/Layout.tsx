@@ -1,7 +1,7 @@
 import { Suspense, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { PageLoading } from './PageLoading';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Printer, Archive, ListOrdered, BarChart3, Cloud, Settings, Sun, Moon, Monitor, ChevronLeft, ChevronRight, Keyboard, Github, ArrowUpCircle, Wrench, FolderKanban, FolderOpen, X, Menu, Info, Plug, Bug, LogOut, Key, Loader2, Disc3, ShieldAlert, Globe, Bell, Receipt, Megaphone, type LucideIcon } from 'lucide-react';
+import { Printer, Archive, ListOrdered, BarChart3, Cloud, Settings, Sun, Moon, Monitor, ChevronLeft, ChevronRight, Keyboard, Github, ArrowUpCircle, Wrench, FolderKanban, FolderOpen, X, Menu, Info, Plug, Bug, LogOut, Key, Loader2, Disc3, ShieldAlert, Globe, Bell, Receipt, Megaphone, ShoppingCart, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
@@ -47,6 +47,7 @@ interface NavItem {
 export const defaultNavItems: NavItem[] = [
   { id: 'printers', to: '/', icon: Printer, labelKey: 'nav.printers' },
   { id: 'inventory', to: '/inventory', icon: Disc3, labelKey: 'nav.inventory' },
+  { id: 'ozon', to: '/ozon', icon: ShoppingCart, labelKey: 'nav.ozon' },
   { id: 'archives', to: '/archives', icon: Archive, labelKey: 'nav.archives' },
   { id: 'queue', to: '/queue', icon: ListOrdered, labelKey: 'nav.queue' },
   { id: 'projects', to: '/projects', icon: FolderKanban, labelKey: 'nav.projects' },
@@ -360,6 +361,7 @@ export function Layout() {
       maintenance: 'maintenance:read',
       projects: 'projects:read',
       inventory: 'inventory:read',
+      ozon: 'inventory:read',
       finance: 'cost_centers:read_own',
       files: ['library:read', 'library:read_own', 'library:read_all'],
       makerworld: ['makerworld:view', 'manyfold:view'],

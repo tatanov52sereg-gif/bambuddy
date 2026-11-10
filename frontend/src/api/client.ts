@@ -9708,3 +9708,72 @@ export const sponsorPromptApi = {
       body: JSON.stringify({ milestone }),
     }),
 };
+
+// ── Ozon marketplace stock (read-only) ──────────────────────────────────────
+// The Seller API key is write-only: the backend reports whether one is stored
+// and never returns it, so a blank field in the form keeps the saved key.
+
+export interface OzonSettings {
+  enabled: boolean;
+  client_id: string;
+  api_key_set: boolean;
+}
+
+export interface OzonSettingsUpdate {
+  enabled: boolean;
+  client_id: string;
+  /** Empty or omitted keeps the stored Api-Key. */
+  api_key?: string;
+}
+
+export interface OzonWarehouseStock {
+  type: string;
+  warehouse_id: number | null;
+  warehouse_name: string;
+  present: number;
+  reserved: number;
+}
+
+export interface OzonStockItem {
+  product_id: number | null;
+  offer_id: string;
+  name: string;
+  sku: number | null;
+  image: string | null;
+  present: number;
+  reserved: number;
+  available: number;
+  warehouses: OzonWarehouseStock[];
+}
+
+export interface OzonStocks {
+  configured: boolean;
+  enabled: boolean;
+  cached: boolean;
+  fetched_at: string | null;
+  total_products: number;
+  total_present: number;
+  total_reserved: number;
+  items: OzonStockItem[];
+}
+
+export interface OzonTestResult {
+  ok: boolean;
+  warehouses: number;
+}
+
+export const ozonApi = {
+  getSettings: () => request<OzonSettings>('/ozon/settings'),
+  updateSettings: (data: OzonSettingsUpdate) =>
+    request<OzonSettings>('/ozon/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  test: (data: { client_id?: string; api_key?: string } = {}) =>
+    request<OzonTestResult>('/ozon/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getStocks: (refresh = false) =>
+    request<OzonStocks>(`/ozon/stocks${refresh ? '?refresh=true' : ''}`),
+};

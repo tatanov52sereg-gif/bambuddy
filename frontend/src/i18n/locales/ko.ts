@@ -8243,5 +8243,47 @@ export default {
         fail: '이 가상 프린터의 TLS 인증서가 없습니다. Bambuddy 데이터 디렉터리가 쓰기 가능한지 확인하세요.'
       }
     }
-  }
+  },
+
+  ozonPage: {
+    title: 'Ozon 재고',
+    subtitle: 'Ozon 판매자 계정의 재고 수량입니다. Bambuddy는 읽기만 하며 수량을 Ozon으로 다시 보내지 않습니다.',
+    connection: '연결',
+    updatedAt: '{{time}} 업데이트',
+    cached: '캐시에서',
+    products: '상품',
+    inStock: '재고 있음',
+    reserved: '예약됨',
+    available: '판매 가능',
+    searchPlaceholder: '이름, 품번 또는 SKU로 검색',
+    noResults: '"{{query}}"와 일치하는 상품이 없습니다.',
+    empty: '이 계정에 대해 Ozon이 반환한 상품이 없습니다.',
+    notConnectedTitle: 'Ozon이 연결되지 않았습니다',
+    notConnectedBody: '클라이언트 ID와 API 키를 입력하면 Ozon 재고를 가져옵니다.',
+    disabledTitle: 'Ozon 재고가 꺼져 있습니다',
+    disabledBody: '연결 설정에서 연동을 켜세요.',
+    openSettings: '설정 열기',
+    settingsTitle: 'Ozon 연결',
+    settingsIntro: 'Bambuddy는 Ozon Seller API에서 재고를 읽습니다. 수량을 다시 전송하지 않습니다.',
+    enabled: '연동 사용',
+    clientId: '클라이언트 ID',
+    clientIdHint: 'Ozon 판매자 센터의 설정 → API 키에서 확인할 수 있습니다.',
+    apiKey: 'API 키',
+    apiKeyHint: '키는 서버에 저장되며 다시 표시되지 않습니다.',
+    apiKeyStored: '키가 저장되어 있습니다. 유지하려면 필드를 비워 두세요.',
+    testConnection: '연결 테스트',
+    testOk: '연결되었습니다. 창고 수: {{count}}',
+    saved: 'Ozon 설정이 저장되었습니다',
+    warehouses: '창고',
+    article: '품번',
+    scheme: '스킴',
+    noWarehouses: '이 상품의 창고 재고가 보고되지 않았습니다.',
+    errors: {
+      invalidCredentials: 'Ozon이 클라이언트 ID 또는 API 키를 거부했습니다. 연결 설정을 확인하세요.',
+      rateLimited: 'Ozon 요청 한도에 도달했습니다. 1분 후 다시 시도하세요.',
+      unavailable: '현재 Ozon에 연결할 수 없습니다. 나중에 다시 시도하세요.',
+      notConfigured: '먼저 클라이언트 ID와 API 키를 입력하세요.',
+      generic: 'Ozon에서 재고를 불러오지 못했습니다.',
+    },
+  },
 };

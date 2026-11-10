@@ -51,11 +51,11 @@ function number(value: number, locale: string): string {
 
 // Ozon splits stock by fulfilment scheme. A product can hold stock in both at
 // once (some at Ozon's warehouse, some at the seller's), so the page shows
-// "all", "fbo" and "fbs" tabs and recomputes the totals from the warehouse rows.
+// "all", "fbo", "fbs" and "low" tabs and recomputes the totals from the rows.
 type Scheme = 'fbo' | 'fbs';
-type TabId = 'all' | Scheme;
+type TabId = 'all' | Scheme | 'low';
 
-const TABS: TabId[] = ['all', 'fbo', 'fbs'];
+const TABS: TabId[] = ['all', 'fbo', 'fbs', 'low'];
 
 // Everything that is not Ozon's own storage ("fbo") is seller-side: an account
 // using crossborder/realFBS still lands under the FBS tab instead of vanishing.
@@ -65,7 +65,9 @@ function schemeOf(warehouse: OzonWarehouseStock): Scheme {
 }
 
 function tabLabel(tab: TabId, t: TFunction): string {
-  return tab === 'all' ? t('ozonPage.tabAll') : tab.toUpperCase();
+  if (tab === 'all') return t('ozonPage.tabAll');
+  if (tab === 'low') return t('ozonPage.tabLow');
+  return tab.toUpperCase();
 }
 
 interface SchemeRow {
@@ -74,6 +76,11 @@ interface SchemeRow {
   present: number;
   reserved: number;
   available: number;
+}
+
+interface LowStockEntry {
+  item: OzonStockItem;
+  schemes: { scheme: Scheme; available: number; threshold: number }[];
 }
 
 function buildRows(items: OzonStockItem[], tab: TabId): SchemeRow[] {
@@ -89,6 +96,32 @@ function buildRows(items: OzonStockItem[], tab: TabId): SchemeRow[] {
     rows.push({ item, warehouses, present, reserved, available: Math.max(present - reserved, 0) });
   }
   return rows;
+}
+
+function buildLowRows(
+  items: OzonStockItem[],
+  thresholds: { fbo: number; fbs: number },
+): LowStockEntry[] {
+  const entries: LowStockEntry[] = [];
+  for (const item of items) {
+    const schemes: LowStockEntry['schemes'] = [];
+    for (const scheme of ['fbo', 'fbs'] as Scheme[]) {
+      const threshold = thresholds[scheme];
+      if (threshold <= 0) continue;
+      const warehouses = item.warehouses.filter((warehouse) => schemeOf(warehouse) === scheme);
+      // A product that is not sold via this scheme at all (no warehouse rows)
+      // must not be flagged as low: zero is not "running out", it is "absent".
+      if (warehouses.length === 0) continue;
+      const present = warehouses.reduce((sum, warehouse) => sum + warehouse.present, 0);
+      const reserved = warehouses.reduce((sum, warehouse) => sum + warehouse.reserved, 0);
+      const available = Math.max(present - reserved, 0);
+      if (available < threshold) {
+        schemes.push({ scheme, available, threshold });
+      }
+    }
+    if (schemes.length > 0) entries.push({ item, schemes });
+  }
+  return entries;
 }
 
 export function OzonPage() {
@@ -126,7 +159,23 @@ export function OzonPage() {
 
   const items = useMemo(() => stocksQuery.data?.items ?? [], [stocksQuery.data]);
 
-  const rows = useMemo(() => buildRows(items, tab), [items, tab]);
+  const thresholds = useMemo(
+    () => ({
+      fbo: stocksQuery.data?.low_stock_threshold_fbo ?? 0,
+      fbs: stocksQuery.data?.low_stock_threshold_fbs ?? 0,
+    }),
+    [stocksQuery.data],
+  );
+
+  const rows = useMemo(
+    () => (tab === 'low' ? [] : buildRows(items, tab)),
+    [items, tab],
+  );
+
+  const lowRows = useMemo(
+    () => (tab === 'low' ? buildLowRows(items, thresholds) : []),
+    [items, thresholds, tab],
+  );
 
   const summary = useMemo(() => {
     const present = rows.reduce((sum, row) => sum + row.present, 0);
@@ -138,6 +187,16 @@ export function OzonPage() {
       available: Math.max(present - reserved, 0),
     };
   }, [rows]);
+
+  const lowSummary = useMemo(() => {
+    const hasScheme = (entry: LowStockEntry, scheme: Scheme) =>
+      entry.schemes.some((row) => row.scheme === scheme);
+    return {
+      products: lowRows.length,
+      fbo: lowRows.filter((entry) => hasScheme(entry, 'fbo')).length,
+      fbs: lowRows.filter((entry) => hasScheme(entry, 'fbs')).length,
+    };
+  }, [lowRows]);
 
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -159,6 +218,31 @@ export function OzonPage() {
       });
     });
   }, [rows, search, sortByStock, i18n.language]);
+
+  const visibleLowRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const filtered = query
+      ? lowRows.filter((entry) => {
+          const item = entry.item;
+          const haystack = [item.name, item.offer_id, item.sku !== null ? String(item.sku) : '']
+            .join(' ')
+            .toLowerCase();
+          return haystack.includes(query);
+        })
+      : lowRows;
+
+    return [...filtered].sort((a, b) => {
+      if (sortByStock) {
+        const aMin = Math.min(...a.schemes.map((row) => row.available));
+        const bMin = Math.min(...b.schemes.map((row) => row.available));
+        if (aMin !== bMin) return aMin - bMin;
+      }
+      return a.item.name.localeCompare(b.item.name, i18n.language, {
+        numeric: true,
+        sensitivity: 'base',
+      });
+    });
+  }, [lowRows, search, sortByStock, i18n.language]);
 
   const toggleExpanded = (key: string) => {
     setExpanded((current) => {
@@ -260,25 +344,43 @@ export function OzonPage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-            <SummaryCard
-              label={t('ozonPage.products')}
-              value={number(summary.products, i18n.language)}
-            />
-            <SummaryCard
-              label={t('ozonPage.inStock')}
-              value={number(summary.present, i18n.language)}
-            />
-            <SummaryCard
-              label={t('ozonPage.reserved')}
-              value={number(summary.reserved, i18n.language)}
-            />
-            <SummaryCard
-              label={t('ozonPage.available')}
-              value={number(summary.available, i18n.language)}
-              highlight
-            />
-          </div>
+          {tab === 'low' ? (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+              <SummaryCard
+                label={t('ozonPage.lowProducts')}
+                value={number(lowSummary.products, i18n.language)}
+                highlight
+              />
+              <SummaryCard
+                label={t('ozonPage.lowFbo')}
+                value={number(lowSummary.fbo, i18n.language)}
+              />
+              <SummaryCard
+                label={t('ozonPage.lowFbs')}
+                value={number(lowSummary.fbs, i18n.language)}
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+              <SummaryCard
+                label={t('ozonPage.products')}
+                value={number(summary.products, i18n.language)}
+              />
+              <SummaryCard
+                label={t('ozonPage.inStock')}
+                value={number(summary.present, i18n.language)}
+              />
+              <SummaryCard
+                label={t('ozonPage.reserved')}
+                value={number(summary.reserved, i18n.language)}
+              />
+              <SummaryCard
+                label={t('ozonPage.available')}
+                value={number(summary.available, i18n.language)}
+                highlight
+              />
+            </div>
+          )}
 
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
             <div className="relative flex-1 min-w-[240px] max-w-md">
@@ -308,7 +410,34 @@ export function OzonPage() {
             </div>
           </div>
 
-          {items.length === 0 ? (
+          {tab === 'low' ? (
+            thresholds.fbo <= 0 && thresholds.fbs <= 0 ? (
+              <EmptyState
+                title={t('ozonPage.lowNoThreshold')}
+                action={
+                  canManageSettings
+                    ? { label: t('ozonPage.openSettings'), onClick: () => setSettingsOpen(true) }
+                    : undefined
+                }
+              />
+            ) : lowRows.length === 0 ? (
+              <EmptyState title={t('ozonPage.lowEmpty')} />
+            ) : visibleLowRows.length === 0 ? (
+              <EmptyState title={t('ozonPage.noResults', { query: search.trim() })} />
+            ) : (
+              <Card className="overflow-hidden">
+                <ul>
+                  {visibleLowRows.map((entry) => (
+                    <LowStockRow
+                      key={itemKey(entry.item)}
+                      entry={entry}
+                      locale={i18n.language}
+                    />
+                  ))}
+                </ul>
+              </Card>
+            )
+          ) : items.length === 0 ? (
             <EmptyState title={t('ozonPage.empty')} />
           ) : rows.length === 0 ? (
             <EmptyState
@@ -522,6 +651,53 @@ function RowNumber({
   );
 }
 
+function LowStockRow({ entry, locale }: { entry: LowStockEntry; locale: string }) {
+  const { t } = useTranslation();
+  const { item, schemes } = entry;
+
+  return (
+    <li className="border-b border-bambu-dark-tertiary last:border-b-0">
+      <div className="w-full flex items-center gap-3 px-4 py-3">
+        {item.image ? (
+          <img
+            src={ozonApi.thumbnailUrl(item.image)}
+            alt=""
+            loading="lazy"
+            className="w-10 h-10 rounded object-cover bg-bambu-dark flex-shrink-0"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded bg-bambu-dark flex items-center justify-center flex-shrink-0">
+            <Package className="w-5 h-5 text-bambu-gray" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-white truncate">{item.name}</p>
+          <p className="text-xs text-bambu-gray truncate">
+            {t('ozonPage.article')}: {item.offer_id || '—'}
+            {item.sku !== null && ` · SKU ${item.sku}`}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 justify-end flex-shrink-0">
+          {schemes.map((row) => (
+            <span
+              key={row.scheme}
+              title={t('ozonPage.lowBadgeTitle', {
+                scheme: row.scheme.toUpperCase(),
+                available: number(row.available, locale),
+                threshold: number(row.threshold, locale),
+              })}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/15 border border-red-500/40 text-red-400 text-xs font-medium"
+            >
+              {row.scheme.toUpperCase()}: {number(row.available, locale)} &lt;{' '}
+              {number(row.threshold, locale)}
+            </span>
+          ))}
+        </div>
+      </div>
+    </li>
+  );
+}
+
 function OzonSettingsModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -530,6 +706,8 @@ function OzonSettingsModal({ onClose }: { onClose: () => void }) {
   const [enabled, setEnabled] = useState(false);
   const [clientId, setClientId] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [thresholdFbo, setThresholdFbo] = useState('0');
+  const [thresholdFbs, setThresholdFbs] = useState('0');
   const [error, setError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<string | null>(null);
 
@@ -542,6 +720,8 @@ function OzonSettingsModal({ onClose }: { onClose: () => void }) {
     if (!settingsQuery.data) return;
     setEnabled(settingsQuery.data.enabled);
     setClientId(settingsQuery.data.client_id);
+    setThresholdFbo(String(settingsQuery.data.low_stock_threshold_fbo));
+    setThresholdFbs(String(settingsQuery.data.low_stock_threshold_fbs));
   }, [settingsQuery.data]);
 
   useEffect(() => {
@@ -571,6 +751,8 @@ function OzonSettingsModal({ onClose }: { onClose: () => void }) {
         enabled,
         client_id: clientId,
         api_key: apiKey || undefined,
+        low_stock_threshold_fbo: parseInt(thresholdFbo, 10) || 0,
+        low_stock_threshold_fbs: parseInt(thresholdFbs, 10) || 0,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ozon-settings'] });
@@ -662,6 +844,45 @@ function OzonSettingsModal({ onClose }: { onClose: () => void }) {
                 <p className="text-xs text-bambu-gray mt-1">
                   {apiKeyStored ? t('ozonPage.apiKeyStored') : t('ozonPage.apiKeyHint')}
                 </p>
+              </div>
+
+              <div className="pt-2 border-t border-bambu-dark-tertiary">
+                <p className="text-sm text-white mb-3">{t('ozonPage.thresholdIntro')}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      className="block text-sm text-bambu-gray mb-1"
+                      htmlFor="ozon-threshold-fbo"
+                    >
+                      {t('ozonPage.thresholdFbo')}
+                    </label>
+                    <input
+                      id="ozon-threshold-fbo"
+                      type="number"
+                      min="0"
+                      value={thresholdFbo}
+                      onChange={(event) => setThresholdFbo(event.target.value)}
+                      className="w-full px-3 py-2 bg-bambu-dark border border-bambu-dark-tertiary rounded-lg text-white focus:border-bambu-green focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      className="block text-sm text-bambu-gray mb-1"
+                      htmlFor="ozon-threshold-fbs"
+                    >
+                      {t('ozonPage.thresholdFbs')}
+                    </label>
+                    <input
+                      id="ozon-threshold-fbs"
+                      type="number"
+                      min="0"
+                      value={thresholdFbs}
+                      onChange={(event) => setThresholdFbs(event.target.value)}
+                      className="w-full px-3 py-2 bg-bambu-dark border border-bambu-dark-tertiary rounded-lg text-white focus:border-bambu-green focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-bambu-gray mt-2">{t('ozonPage.thresholdHint')}</p>
               </div>
 
               {error && (

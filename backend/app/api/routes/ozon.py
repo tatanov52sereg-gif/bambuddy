@@ -87,6 +87,8 @@ class OzonSettingsResponse(BaseModel):
     enabled: bool
     client_id: str
     api_key_set: bool
+    low_stock_threshold_fbo: int
+    low_stock_threshold_fbs: int
 
 
 class OzonSettingsUpdate(BaseModel):
@@ -95,6 +97,8 @@ class OzonSettingsUpdate(BaseModel):
     enabled: bool
     client_id: str = Field(default="", max_length=64)
     api_key: str | None = Field(default=None, max_length=256)
+    low_stock_threshold_fbo: int = Field(default=0, ge=0)
+    low_stock_threshold_fbs: int = Field(default=0, ge=0)
 
 
 class OzonTestRequest(BaseModel):
@@ -139,6 +143,8 @@ class OzonStocksResponse(BaseModel):
     total_present: int = 0
     total_reserved: int = 0
     items: list[OzonStockItem] = []
+    low_stock_threshold_fbo: int = 0
+    low_stock_threshold_fbs: int = 0
 
 
 class OzonTestResponse(BaseModel):
@@ -179,6 +185,23 @@ async def _load_credentials(db: AsyncSession) -> tuple[str, str] | None:
 
 async def _load_enabled(db: AsyncSession) -> bool:
     return (await _get_setting(db, "ozon_enabled") or "false").lower() in {"true", "1", "yes", "on"}
+
+
+async def _load_threshold(db: AsyncSession, key: str) -> int:
+    """A low-stock threshold setting, clamped to a non-negative integer."""
+    raw = (await _get_setting(db, key) or "").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return 0
+    return max(value, 0)
+
+
+async def _load_thresholds(db: AsyncSession) -> tuple[int, int]:
+    return (
+        await _load_threshold(db, "ozon_low_stock_threshold_fbo"),
+        await _load_threshold(db, "ozon_low_stock_threshold_fbs"),
+    )
 
 
 def _ozon_error(response: httpx.Response) -> OzonApiError:
@@ -397,10 +420,13 @@ async def get_ozon_settings(
     """Connection settings. The Api-Key itself is never returned."""
     client_id = (await _get_setting(db, "ozon_client_id") or "").strip()
     api_key = (await _get_setting(db, "ozon_api_key") or "").strip()
+    threshold_fbo, threshold_fbs = await _load_thresholds(db)
     return OzonSettingsResponse(
         enabled=await _load_enabled(db),
         client_id=client_id,
         api_key_set=bool(api_key),
+        low_stock_threshold_fbo=threshold_fbo,
+        low_stock_threshold_fbs=threshold_fbs,
     )
 
 
@@ -419,12 +445,15 @@ async def update_ozon_settings(
     client_id = data.client_id.strip()
     await _set_setting(db, "ozon_enabled", "true" if data.enabled else "false")
     await _set_setting(db, "ozon_client_id", client_id)
+    await _set_setting(db, "ozon_low_stock_threshold_fbo", str(data.low_stock_threshold_fbo))
+    await _set_setting(db, "ozon_low_stock_threshold_fbs", str(data.low_stock_threshold_fbs))
     if data.api_key and data.api_key.strip():
         await _set_setting(db, "ozon_api_key", data.api_key.strip())
     await db.commit()
 
     # The cached payload belongs to the old credentials; a new Client-Id or key
-    # could point at a different seller account.
+    # could point at a different seller account. Thresholds live in the payload
+    # too, so any settings change invalidates the cached snapshot.
     _stock_cache.clear()
 
     api_key = (await _get_setting(db, "ozon_api_key") or "").strip()
@@ -432,6 +461,8 @@ async def update_ozon_settings(
         enabled=data.enabled,
         client_id=client_id,
         api_key_set=bool(api_key),
+        low_stock_threshold_fbo=data.low_stock_threshold_fbo,
+        low_stock_threshold_fbs=data.low_stock_threshold_fbs,
     )
 
 
@@ -474,13 +505,22 @@ async def get_ozon_stocks(
         return OzonStocksResponse(configured=True, enabled=False)
 
     client_id, api_key = credentials
+    threshold_fbo, threshold_fbs = await _load_thresholds(db)
     now = time.monotonic()
     if not refresh:
         cached = _stock_cache.get(client_id)
         if cached and now - cached[0] < CACHE_TTL_SECONDS:
             # The stored payload already carries cached=False; override it so
-            # the page knows it is looking at an older snapshot.
-            return OzonStocksResponse(**{**cached[1], "cached": True})
+            # the page knows it is looking at an older snapshot. Thresholds are
+            # read fresh so a settings change takes effect without a refresh.
+            return OzonStocksResponse(
+                **{
+                    **cached[1],
+                    "cached": True,
+                    "low_stock_threshold_fbo": threshold_fbo,
+                    "low_stock_threshold_fbs": threshold_fbs,
+                }
+            )
 
     try:
         items = await _fetch_and_merge(client_id, api_key)
@@ -496,6 +536,8 @@ async def get_ozon_stocks(
         "total_present": sum(item.present for item in items),
         "total_reserved": sum(item.reserved for item in items),
         "items": [item.model_dump() for item in items],
+        "low_stock_threshold_fbo": threshold_fbo,
+        "low_stock_threshold_fbs": threshold_fbs,
     }
     _stock_cache[client_id] = (now, payload)
     return OzonStocksResponse(**payload)

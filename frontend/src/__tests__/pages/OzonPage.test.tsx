@@ -22,6 +22,8 @@ const stocks = {
   total_products: 2,
   total_present: 15,
   total_reserved: 3,
+  low_stock_threshold_fbo: 0,
+  low_stock_threshold_fbs: 0,
   items: [
     {
       product_id: 10,
@@ -176,6 +178,42 @@ describe('OzonPage', () => {
     expect(screen.queryByText('Steel bracket')).not.toBeInTheDocument();
   });
 
+  it('lists products below the per-scheme threshold on the low-stock tab', async () => {
+    server.use(
+      http.get('*/ozon/stocks', () =>
+        HttpResponse.json({
+          ...stocks,
+          low_stock_threshold_fbo: 6,
+          low_stock_threshold_fbs: 3,
+        }),
+      ),
+    );
+
+    render(<OzonPage />);
+
+    await screen.findByRole('tab', { name: 'All' });
+    await userEvent.click(screen.getByRole('tab', { name: 'Low stock' }));
+
+    // Steel bracket: FBO available 5 < 6, FBS available 2 < 3 — low in both.
+    expect(await screen.findByText('Steel bracket')).toBeInTheDocument();
+    expect(screen.getByText('FBO: 5 < 6')).toBeInTheDocument();
+    expect(screen.getByText('FBS: 2 < 3')).toBeInTheDocument();
+
+    // Spool holder: FBS available 5 >= 3 — not below threshold.
+    expect(screen.queryByText('Spool holder')).not.toBeInTheDocument();
+  });
+
+  it('shows a hint on the low-stock tab when no threshold is set', async () => {
+    server.use(http.get('*/ozon/stocks', () => HttpResponse.json(stocks)));
+
+    render(<OzonPage />);
+
+    await screen.findByRole('tab', { name: 'All' });
+    await userEvent.click(screen.getByRole('tab', { name: 'Low stock' }));
+
+    expect(await screen.findByText(/set a low-stock threshold/i)).toBeInTheDocument();
+  });
+
   it('asks the backend for a forced refresh', async () => {
     let refreshSeen = false;
     server.use(
@@ -210,11 +248,23 @@ describe('OzonPage', () => {
         }),
       ),
       http.get('*/ozon/settings', () =>
-        HttpResponse.json({ enabled: true, client_id: '123456', api_key_set: true }),
+        HttpResponse.json({
+          enabled: true,
+          client_id: '123456',
+          api_key_set: true,
+          low_stock_threshold_fbo: 0,
+          low_stock_threshold_fbs: 0,
+        }),
       ),
       http.put('*/ozon/settings', async ({ request }) => {
         savedBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ enabled: true, client_id: '123456', api_key_set: true });
+        return HttpResponse.json({
+          enabled: true,
+          client_id: '123456',
+          api_key_set: true,
+          low_stock_threshold_fbo: 0,
+          low_stock_threshold_fbs: 0,
+        });
       }),
     );
 
@@ -230,7 +280,12 @@ describe('OzonPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
-    expect(savedBody).toMatchObject({ enabled: true, client_id: '123456' });
+    expect(savedBody).toMatchObject({
+      enabled: true,
+      client_id: '123456',
+      low_stock_threshold_fbo: 0,
+      low_stock_threshold_fbs: 0,
+    });
     // A blank field must not send an empty key: that would erase the stored one.
     expect(savedBody).not.toHaveProperty('api_key');
   });

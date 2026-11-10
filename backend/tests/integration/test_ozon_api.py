@@ -145,6 +145,35 @@ class TestSettings:
         assert response.json()["api_key_set"] is True
         assert await _stored(db_session, "ozon_api_key") == "secret-key"
 
+    async def test_saves_and_returns_low_stock_thresholds(self, async_client: AsyncClient, db_session):
+        response = await async_client.put(
+            "/api/v1/ozon/settings",
+            json={
+                "enabled": True,
+                "client_id": "123456",
+                "api_key": "secret-key",
+                "low_stock_threshold_fbo": 5,
+                "low_stock_threshold_fbs": 2,
+            },
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["low_stock_threshold_fbo"] == 5
+        assert response.json()["low_stock_threshold_fbs"] == 2
+
+        fetched = await async_client.get("/api/v1/ozon/settings")
+        assert fetched.json()["low_stock_threshold_fbo"] == 5
+        assert fetched.json()["low_stock_threshold_fbs"] == 2
+
+        assert await _stored(db_session, "ozon_low_stock_threshold_fbo") == "5"
+        assert await _stored(db_session, "ozon_low_stock_threshold_fbs") == "2"
+
+    async def test_thresholds_default_to_zero(self, async_client: AsyncClient):
+        await _configure(async_client)
+
+        fetched = await async_client.get("/api/v1/ozon/settings")
+        assert fetched.json()["low_stock_threshold_fbo"] == 0
+        assert fetched.json()["low_stock_threshold_fbs"] == 0
+
 
 class TestStocks:
     async def test_reports_not_configured(self, async_client: AsyncClient):
@@ -205,6 +234,24 @@ class TestStocks:
         assert refreshed.json()["cached"] is False
         assert calls_after_two > 0
         assert mock.await_count > calls_after_two
+
+    async def test_stocks_response_includes_thresholds(self, async_client: AsyncClient):
+        await async_client.put(
+            "/api/v1/ozon/settings",
+            json={
+                "enabled": True,
+                "client_id": "123456",
+                "api_key": "secret-key",
+                "low_stock_threshold_fbo": 5,
+                "low_stock_threshold_fbs": 2,
+            },
+        )
+
+        with patch.object(ozon_module, "_ozon_post", AsyncMock(side_effect=_fake_ozon)):
+            response = await async_client.get("/api/v1/ozon/stocks")
+
+        assert response.json()["low_stock_threshold_fbo"] == 5
+        assert response.json()["low_stock_threshold_fbs"] == 2
 
     async def test_credentials_are_sent_as_headers(self, async_client: AsyncClient):
         await _configure(async_client, client_id="777", api_key="key-777")

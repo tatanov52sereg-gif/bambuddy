@@ -9717,6 +9717,8 @@ export interface OzonSettings {
   enabled: boolean;
   client_id: string;
   api_key_set: boolean;
+  low_stock_threshold_fbo: number;
+  low_stock_threshold_fbs: number;
 }
 
 export interface OzonSettingsUpdate {
@@ -9724,6 +9726,8 @@ export interface OzonSettingsUpdate {
   client_id: string;
   /** Empty or omitted keeps the stored Api-Key. */
   api_key?: string;
+  low_stock_threshold_fbo: number;
+  low_stock_threshold_fbs: number;
 }
 
 export interface OzonWarehouseStock {
@@ -9755,6 +9759,8 @@ export interface OzonStocks {
   total_present: number;
   total_reserved: number;
   items: OzonStockItem[];
+  low_stock_threshold_fbo: number;
+  low_stock_threshold_fbs: number;
 }
 
 export interface OzonTestResult {

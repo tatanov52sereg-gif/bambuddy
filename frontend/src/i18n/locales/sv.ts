@@ -8686,6 +8686,7 @@ errors: {
     noResults: 'Inga produkter matchar "{{query}}".',
     empty: 'Ozon returnerade inga produkter för det här kontot.',
     noScheme: 'Inget {{scheme}}-lager i kontot.',
+    tabAll: 'Allt',
     notConnectedTitle: 'Ozon är inte anslutet',
     notConnectedBody: 'Lägg till klient-ID och API-nyckel för att hämta lager från Ozon.',
     disabledTitle: 'Ozon-lagret är avstängt',

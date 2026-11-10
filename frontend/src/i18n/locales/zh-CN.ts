@@ -8620,6 +8620,7 @@ export default {
     noResults: '没有与“{{query}}”匹配的商品。',
     empty: 'Ozon 未返回该账户的商品。',
     noScheme: '账户中没有 {{scheme}} 库存。',
+    tabAll: '全部',
     notConnectedTitle: 'Ozon 尚未连接',
     notConnectedBody: '添加客户端 ID 和 API 密钥即可获取 Ozon 库存。',
     disabledTitle: 'Ozon 库存已关闭',

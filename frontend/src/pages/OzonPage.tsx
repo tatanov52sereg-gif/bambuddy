@@ -50,17 +50,22 @@ function number(value: number, locale: string): string {
 }
 
 // Ozon splits stock by fulfilment scheme. A product can hold stock in both at
-// once (some at Ozon's warehouse, some at the seller's), so the page shows them
-// as two tabs and recomputes the per-scheme totals from the warehouse rows.
+// once (some at Ozon's warehouse, some at the seller's), so the page shows
+// "all", "fbo" and "fbs" tabs and recomputes the totals from the warehouse rows.
 type Scheme = 'fbo' | 'fbs';
+type TabId = 'all' | Scheme;
 
-const SCHEMES: Scheme[] = ['fbo', 'fbs'];
+const TABS: TabId[] = ['all', 'fbo', 'fbs'];
 
 // Everything that is not Ozon's own storage ("fbo") is seller-side: an account
 // using crossborder/realFBS still lands under the FBS tab instead of vanishing.
 // The raw type stays visible in each product's warehouse breakdown.
 function schemeOf(warehouse: OzonWarehouseStock): Scheme {
   return warehouse.type?.toLowerCase() === 'fbo' ? 'fbo' : 'fbs';
+}
+
+function tabLabel(tab: TabId, t: TFunction): string {
+  return tab === 'all' ? t('ozonPage.tabAll') : tab.toUpperCase();
 }
 
 interface SchemeRow {
@@ -71,10 +76,13 @@ interface SchemeRow {
   available: number;
 }
 
-function buildRows(items: OzonStockItem[], scheme: Scheme): SchemeRow[] {
+function buildRows(items: OzonStockItem[], tab: TabId): SchemeRow[] {
   const rows: SchemeRow[] = [];
   for (const item of items) {
-    const warehouses = item.warehouses.filter((warehouse) => schemeOf(warehouse) === scheme);
+    const warehouses =
+      tab === 'all'
+        ? item.warehouses
+        : item.warehouses.filter((warehouse) => schemeOf(warehouse) === tab);
     if (warehouses.length === 0) continue;
     const present = warehouses.reduce((sum, warehouse) => sum + warehouse.present, 0);
     const reserved = warehouses.reduce((sum, warehouse) => sum + warehouse.reserved, 0);
@@ -91,7 +99,7 @@ export function OzonPage() {
 
   const [search, setSearch] = useState('');
   const [sortByStock, setSortByStock] = useState(false);
-  const [scheme, setScheme] = useState<Scheme>('fbo');
+  const [tab, setTab] = useState<TabId>('all');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -118,7 +126,7 @@ export function OzonPage() {
 
   const items = useMemo(() => stocksQuery.data?.items ?? [], [stocksQuery.data]);
 
-  const rows = useMemo(() => buildRows(items, scheme), [items, scheme]);
+  const rows = useMemo(() => buildRows(items, tab), [items, tab]);
 
   const summary = useMemo(() => {
     const present = rows.reduce((sum, row) => sum + row.present, 0);
@@ -234,20 +242,20 @@ export function OzonPage() {
       ) : (
         <>
           <div className="flex border-b border-bambu-dark-tertiary mb-4" role="tablist">
-            {SCHEMES.map((option) => (
+            {TABS.map((option) => (
               <button
                 key={option}
                 type="button"
                 role="tab"
-                aria-selected={scheme === option}
-                onClick={() => setScheme(option)}
-                className={`px-4 py-3 text-sm font-medium uppercase transition-colors border-b-2 -mb-px ${
-                  scheme === option
+                aria-selected={tab === option}
+                onClick={() => setTab(option)}
+                className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  tab === option
                     ? 'text-bambu-green border-bambu-green'
                     : 'text-bambu-gray hover:text-white border-transparent'
                 }`}
               >
-                {option}
+                {tabLabel(option, t)}
               </button>
             ))}
           </div>
@@ -303,7 +311,13 @@ export function OzonPage() {
           {items.length === 0 ? (
             <EmptyState title={t('ozonPage.empty')} />
           ) : rows.length === 0 ? (
-            <EmptyState title={t('ozonPage.noScheme', { scheme: scheme.toUpperCase() })} />
+            <EmptyState
+              title={
+                tab === 'all'
+                  ? t('ozonPage.empty')
+                  : t('ozonPage.noScheme', { scheme: tab.toUpperCase() })
+              }
+            />
           ) : visibleRows.length === 0 ? (
             <EmptyState title={t('ozonPage.noResults', { query: search.trim() })} />
           ) : (

@@ -8690,6 +8690,7 @@ export default {
     noResults: 'No products match "{{query}}".',
     empty: 'Ozon returned no products for this account.',
     noScheme: 'No {{scheme}} stock in the account.',
+    tabAll: 'All',
     notConnectedTitle: 'Ozon is not connected',
     notConnectedBody: 'Add your Client ID and API key to pull stock levels from Ozon.',
     disabledTitle: 'Ozon stock is turned off',

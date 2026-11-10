@@ -96,27 +96,33 @@ describe('OzonPage', () => {
     expect(screen.getByRole('button', { name: 'Open settings' })).toBeInTheDocument();
   });
 
-  it('shows per-scheme stock and switches between FBO and FBS tabs', async () => {
+  it('shows the combined view by default and switches between All, FBO and FBS tabs', async () => {
     server.use(http.get('*/ozon/stocks', () => HttpResponse.json(stocks)));
 
     render(<OzonPage />);
 
-    // Default is the FBO tab: only the product with FBO stock is listed.
+    // Default "All" tab lists every product, regardless of scheme.
+    expect(await screen.findByText('Steel bracket')).toBeInTheDocument();
+    expect(screen.getByText('Spool holder')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
+
+    // FBO: only the product with FBO stock, and only its FBO warehouse.
+    await userEvent.click(screen.getByRole('tab', { name: 'FBO' }));
     expect(await screen.findByText('Steel bracket')).toBeInTheDocument();
     expect(screen.queryByText('Spool holder')).not.toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'fbo' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'FBO' })).toHaveAttribute('aria-selected', 'true');
 
     await userEvent.click(screen.getByRole('button', { expanded: false, name: /Steel bracket/ }));
     expect(await screen.findByText('Main warehouse')).toBeInTheDocument();
     // The seller's "Overflow" warehouse is FBS, so it must not leak into FBO.
     expect(screen.queryByText('Overflow')).not.toBeInTheDocument();
 
-    // Switch to FBS: both products hold FBS stock, and "Main warehouse" is gone.
-    await userEvent.click(screen.getByRole('tab', { name: 'fbs' }));
+    // FBS: both products hold FBS stock, and "Main warehouse" is gone.
+    await userEvent.click(screen.getByRole('tab', { name: 'FBS' }));
     expect(await screen.findByText('Spool holder')).toBeInTheDocument();
     expect(screen.getByText('Steel bracket')).toBeInTheDocument();
     expect(screen.queryByText('Main warehouse')).not.toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'fbs' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'FBS' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('shows an empty state for a scheme with no stock', async () => {
@@ -145,10 +151,14 @@ describe('OzonPage', () => {
 
     render(<OzonPage />);
 
+    // The combined tab still lists the FBS-only product.
+    expect(await screen.findByText('Spool holder')).toBeInTheDocument();
+
     // FBO is empty for this account.
+    await userEvent.click(screen.getByRole('tab', { name: 'FBO' }));
     expect(await screen.findByText(/no fbo stock/i)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('tab', { name: 'fbs' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'FBS' }));
     expect(await screen.findByText('Spool holder')).toBeInTheDocument();
   });
 
@@ -158,6 +168,7 @@ describe('OzonPage', () => {
     render(<OzonPage />);
     await screen.findByText('Steel bracket');
 
+    await userEvent.click(screen.getByRole('tab', { name: 'FBO' }));
     await userEvent.type(screen.getByPlaceholderText(/search by name/i), 'spool');
 
     // "Spool holder" is FBS-only, so on the FBO tab nothing matches.

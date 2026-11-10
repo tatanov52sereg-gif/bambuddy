@@ -8690,6 +8690,7 @@ export default {
     noResults: 'Brak produktów pasujących do „{{query}}”.',
     empty: 'Ozon nie zwrócił żadnych produktów dla tego konta.',
     noScheme: 'Brak stanów {{scheme}} na koncie.',
+    tabAll: 'Wszystko',
     notConnectedTitle: 'Ozon nie jest połączony',
     notConnectedBody: 'Dodaj identyfikator klienta i klucz API, aby pobierać stany z Ozonu.',
     disabledTitle: 'Stany Ozon są wyłączone',

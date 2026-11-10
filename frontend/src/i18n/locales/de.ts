@@ -8637,6 +8637,7 @@ export default {
     noResults: 'Keine Produkte passen zu „{{query}}“.',
     empty: 'Ozon hat für dieses Konto keine Produkte zurückgegeben.',
     noScheme: 'Kein {{scheme}}-Bestand im Konto.',
+    tabAll: 'Alle',
     notConnectedTitle: 'Ozon ist nicht verbunden',
     notConnectedBody: 'Hinterlegen Sie Client-ID und API-Schlüssel, um Bestände von Ozon abzurufen.',
     disabledTitle: 'Ozon-Bestand ist deaktiviert',

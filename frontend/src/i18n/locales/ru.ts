@@ -8242,6 +8242,7 @@ export default {
     noResults: 'Нет товаров по запросу «{{query}}».',
     empty: 'Ozon не вернул товары для этого аккаунта.',
     noScheme: 'В аккаунте нет остатков {{scheme}}.',
+    tabAll: 'Общее',
     notConnectedTitle: 'Ozon не подключён',
     notConnectedBody: 'Укажите Client-ID и API-ключ, чтобы получать остатки из Ozon.',
     disabledTitle: 'Остатки Ozon отключены',

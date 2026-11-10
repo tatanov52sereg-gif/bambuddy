@@ -8636,6 +8636,7 @@ export default {
     searchPlaceholder: 'Nach Name, Artikelnummer oder SKU suchen',
     noResults: 'Keine Produkte passen zu „{{query}}“.',
     empty: 'Ozon hat für dieses Konto keine Produkte zurückgegeben.',
+    noScheme: 'Kein {{scheme}}-Bestand im Konto.',
     notConnectedTitle: 'Ozon ist nicht verbunden',
     notConnectedBody: 'Hinterlegen Sie Client-ID und API-Schlüssel, um Bestände von Ozon abzurufen.',
     disabledTitle: 'Ozon-Bestand ist deaktiviert',

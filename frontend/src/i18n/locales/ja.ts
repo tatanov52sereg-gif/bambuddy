@@ -8635,6 +8635,7 @@ export default {
     searchPlaceholder: '商品名・品番・SKU で検索',
     noResults: '「{{query}}」に一致する商品はありません。',
     empty: 'このアカウントの商品は Ozon から返されませんでした。',
+    noScheme: 'アカウントに {{scheme}} の在庫がありません。',
     notConnectedTitle: 'Ozon に接続されていません',
     notConnectedBody: 'クライアント ID と API キーを登録すると、Ozon の在庫を取得できます。',
     disabledTitle: 'Ozon 在庫は無効です',

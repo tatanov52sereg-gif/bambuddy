@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 import { ApiError, ozonApi } from '../api/client';
-import type { OzonStockItem } from '../api/client';
+import type { OzonStockItem, OzonWarehouseStock } from '../api/client';
 import { Button } from '../components/Button';
 import { Card, CardContent } from '../components/Card';
 import { Toggle } from '../components/Toggle';
@@ -49,6 +49,40 @@ function number(value: number, locale: string): string {
   return value.toLocaleString(locale);
 }
 
+// Ozon splits stock by fulfilment scheme. A product can hold stock in both at
+// once (some at Ozon's warehouse, some at the seller's), so the page shows them
+// as two tabs and recomputes the per-scheme totals from the warehouse rows.
+type Scheme = 'fbo' | 'fbs';
+
+const SCHEMES: Scheme[] = ['fbo', 'fbs'];
+
+// Everything that is not Ozon's own storage ("fbo") is seller-side: an account
+// using crossborder/realFBS still lands under the FBS tab instead of vanishing.
+// The raw type stays visible in each product's warehouse breakdown.
+function schemeOf(warehouse: OzonWarehouseStock): Scheme {
+  return warehouse.type?.toLowerCase() === 'fbo' ? 'fbo' : 'fbs';
+}
+
+interface SchemeRow {
+  item: OzonStockItem;
+  warehouses: OzonWarehouseStock[];
+  present: number;
+  reserved: number;
+  available: number;
+}
+
+function buildRows(items: OzonStockItem[], scheme: Scheme): SchemeRow[] {
+  const rows: SchemeRow[] = [];
+  for (const item of items) {
+    const warehouses = item.warehouses.filter((warehouse) => schemeOf(warehouse) === scheme);
+    if (warehouses.length === 0) continue;
+    const present = warehouses.reduce((sum, warehouse) => sum + warehouse.present, 0);
+    const reserved = warehouses.reduce((sum, warehouse) => sum + warehouse.reserved, 0);
+    rows.push({ item, warehouses, present, reserved, available: Math.max(present - reserved, 0) });
+  }
+  return rows;
+}
+
 export function OzonPage() {
   const { t, i18n } = useTranslation();
   const { hasPermission } = useAuth();
@@ -57,6 +91,7 @@ export function OzonPage() {
 
   const [search, setSearch] = useState('');
   const [sortByStock, setSortByStock] = useState(false);
+  const [scheme, setScheme] = useState<Scheme>('fbo');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -83,22 +118,39 @@ export function OzonPage() {
 
   const items = useMemo(() => stocksQuery.data?.items ?? [], [stocksQuery.data]);
 
-  const visibleItems = useMemo(() => {
+  const rows = useMemo(() => buildRows(items, scheme), [items, scheme]);
+
+  const summary = useMemo(() => {
+    const present = rows.reduce((sum, row) => sum + row.present, 0);
+    const reserved = rows.reduce((sum, row) => sum + row.reserved, 0);
+    return {
+      products: rows.length,
+      present,
+      reserved,
+      available: Math.max(present - reserved, 0),
+    };
+  }, [rows]);
+
+  const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     const filtered = query
-      ? items.filter((item) => {
+      ? rows.filter((row) => {
+          const item = row.item;
           const haystack = [item.name, item.offer_id, item.sku !== null ? String(item.sku) : '']
             .join(' ')
             .toLowerCase();
           return haystack.includes(query);
         })
-      : items;
+      : rows;
 
     return [...filtered].sort((a, b) => {
       if (sortByStock && a.available !== b.available) return b.available - a.available;
-      return a.name.localeCompare(b.name, i18n.language, { numeric: true, sensitivity: 'base' });
+      return a.item.name.localeCompare(b.item.name, i18n.language, {
+        numeric: true,
+        sensitivity: 'base',
+      });
     });
-  }, [items, search, sortByStock, i18n.language]);
+  }, [rows, search, sortByStock, i18n.language]);
 
   const toggleExpanded = (key: string) => {
     setExpanded((current) => {
@@ -181,22 +233,41 @@ export function OzonPage() {
         />
       ) : (
         <>
+          <div className="flex border-b border-bambu-dark-tertiary mb-4" role="tablist">
+            {SCHEMES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="tab"
+                aria-selected={scheme === option}
+                onClick={() => setScheme(option)}
+                className={`px-4 py-3 text-sm font-medium uppercase transition-colors border-b-2 -mb-px ${
+                  scheme === option
+                    ? 'text-bambu-green border-bambu-green'
+                    : 'text-bambu-gray hover:text-white border-transparent'
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
             <SummaryCard
               label={t('ozonPage.products')}
-              value={number(data.total_products, i18n.language)}
+              value={number(summary.products, i18n.language)}
             />
             <SummaryCard
               label={t('ozonPage.inStock')}
-              value={number(data.total_present, i18n.language)}
+              value={number(summary.present, i18n.language)}
             />
             <SummaryCard
               label={t('ozonPage.reserved')}
-              value={number(data.total_reserved, i18n.language)}
+              value={number(summary.reserved, i18n.language)}
             />
             <SummaryCard
               label={t('ozonPage.available')}
-              value={number(Math.max(data.total_present - data.total_reserved, 0), i18n.language)}
+              value={number(summary.available, i18n.language)}
               highlight
             />
           </div>
@@ -231,18 +302,20 @@ export function OzonPage() {
 
           {items.length === 0 ? (
             <EmptyState title={t('ozonPage.empty')} />
-          ) : visibleItems.length === 0 ? (
+          ) : rows.length === 0 ? (
+            <EmptyState title={t('ozonPage.noScheme', { scheme: scheme.toUpperCase() })} />
+          ) : visibleRows.length === 0 ? (
             <EmptyState title={t('ozonPage.noResults', { query: search.trim() })} />
           ) : (
             <Card className="overflow-hidden">
               <ul>
-                {visibleItems.map((item) => (
+                {visibleRows.map((row) => (
                   <StockRow
-                    key={itemKey(item)}
-                    item={item}
+                    key={itemKey(row.item)}
+                    row={row}
                     locale={i18n.language}
-                    expanded={expanded.has(itemKey(item))}
-                    onToggle={() => toggleExpanded(itemKey(item))}
+                    expanded={expanded.has(itemKey(row.item))}
+                    onToggle={() => toggleExpanded(itemKey(row.item))}
                   />
                 ))}
               </ul>
@@ -304,18 +377,19 @@ function EmptyState({
 }
 
 function StockRow({
-  item,
+  row,
   locale,
   expanded,
   onToggle,
 }: {
-  item: OzonStockItem;
+  row: SchemeRow;
   locale: string;
   expanded: boolean;
   onToggle: () => void;
 }) {
   const { t } = useTranslation();
   const Chevron = expanded ? ChevronDown : ChevronRight;
+  const { item, warehouses, present, reserved, available } = row;
 
   return (
     <li className="border-b border-bambu-dark-tertiary last:border-b-0">
@@ -328,7 +402,7 @@ function StockRow({
         <Chevron className="w-4 h-4 text-bambu-gray flex-shrink-0" />
         {item.image ? (
           <img
-            src={item.image}
+            src={ozonApi.thumbnailUrl(item.image)}
             alt=""
             loading="lazy"
             className="w-10 h-10 rounded object-cover bg-bambu-dark flex-shrink-0"
@@ -346,20 +420,15 @@ function StockRow({
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3 md:gap-6 text-right flex-shrink-0">
-          <RowNumber label={t('ozonPage.inStock')} value={item.present} locale={locale} />
-          <RowNumber label={t('ozonPage.reserved')} value={item.reserved} locale={locale} />
-          <RowNumber
-            label={t('ozonPage.available')}
-            value={item.available}
-            locale={locale}
-            highlight
-          />
+          <RowNumber label={t('ozonPage.inStock')} value={present} locale={locale} />
+          <RowNumber label={t('ozonPage.reserved')} value={reserved} locale={locale} />
+          <RowNumber label={t('ozonPage.available')} value={available} locale={locale} highlight />
         </div>
       </button>
 
       {expanded && (
         <div className="px-4 pb-4 pl-14">
-          {item.warehouses.length === 0 ? (
+          {warehouses.length === 0 ? (
             <p className="text-sm text-bambu-gray">{t('ozonPage.noWarehouses')}</p>
           ) : (
             <div className="rounded-lg border border-bambu-dark-tertiary overflow-hidden">
@@ -377,7 +446,7 @@ function StockRow({
                   </tr>
                 </thead>
                 <tbody>
-                  {item.warehouses.map((warehouse, index) => (
+                  {warehouses.map((warehouse, index) => (
                     <tr
                       key={`${warehouse.warehouse_id ?? 'w'}-${index}`}
                       className="border-t border-bambu-dark-tertiary"

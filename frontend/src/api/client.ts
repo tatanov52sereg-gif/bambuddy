@@ -9776,4 +9776,7 @@ export const ozonApi = {
     }),
   getStocks: (refresh = false) =>
     request<OzonStocks>(`/ozon/stocks${refresh ? '?refresh=true' : ''}`),
+  // Product photos are proxied through the backend so the SPA's ``img-src``
+  // CSP (which only allows 'self' data: blob:) doesn't block them.
+  thumbnailUrl: (url: string) => `/api/v1/ozon/thumbnail?url=${encodeURIComponent(url)}`,
 };

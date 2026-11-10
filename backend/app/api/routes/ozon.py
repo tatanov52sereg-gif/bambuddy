@@ -24,9 +24,10 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,6 +62,20 @@ MAX_PRODUCTS = 5000
 CACHE_TTL_SECONDS = 300
 
 _REQUEST_TIMEOUT_SECONDS = 30.0
+
+# Ozon's product images live on its own CDN. The SPA's ``img-src`` CSP allows
+# only ``'self' data: blob:``, so we proxy them instead of hotlinking (see the
+# MakerWorld thumbnail endpoint for the same approach). This suffix allowlist is
+# the SSRF guard: only Ozon's image CDN hosts are reachable through /thumbnail.
+_IMAGE_HOST_SUFFIXES = (".ozon.ru", ".ozone.ru")
+_MAX_IMAGE_BYTES = 10 * 1024 * 1024
+_IMAGE_EXT_TO_MIME = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
 
 # (client_id) -> (monotonic timestamp, response payload)
 _stock_cache: dict[str, tuple[float, dict]] = {}
@@ -484,3 +499,71 @@ async def get_ozon_stocks(
     }
     _stock_cache[client_id] = (now, payload)
     return OzonStocksResponse(**payload)
+
+
+async def _fetch_image(url: str) -> tuple[bytes, str]:
+    """Fetch one Ozon CDN image, returning ``(bytes, content_type)``.
+
+    The host must be an Ozon image host (SSRF guard) and the payload is capped;
+    content type is taken from the upstream header when it is an image, else
+    derived from the file extension. Non-image responses are refused so an
+    upstream error page can't slip through as an image.
+    """
+    try:
+        parsed = urlparse(url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid image URL") from exc
+
+    host = (parsed.hostname or "").lower()
+    if not any(host.endswith(suffix) for suffix in _IMAGE_HOST_SUFFIXES):
+        raise HTTPException(status_code=400, detail="Refusing to proxy a non-Ozon image host")
+
+    try:
+        async with httpx.AsyncClient(timeout=_REQUEST_TIMEOUT_SECONDS, follow_redirects=False) as client:
+            response = await client.get(url)
+    except httpx.HTTPError as exc:
+        logger.warning("Ozon image request failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Ozon image is not reachable") from exc
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Ozon image returned HTTP {response.status_code}")
+
+    upstream_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
+    if upstream_type.startswith("text/") or upstream_type == "application/json":
+        raise HTTPException(status_code=502, detail="Ozon image returned a non-image response")
+
+    path_lower = parsed.path.lower()
+    ext_mime: str | None = None
+    for ext, mime in _IMAGE_EXT_TO_MIME.items():
+        if path_lower.endswith(ext):
+            ext_mime = mime
+            break
+
+    if upstream_type.startswith("image/"):
+        content_type = upstream_type
+    elif ext_mime is not None:
+        content_type = ext_mime
+    else:
+        raise HTTPException(status_code=502, detail="Ozon image has an unknown content type")
+
+    if len(response.content) > _MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=502, detail="Ozon image is too large")
+
+    return response.content, content_type
+
+
+@router.get("/thumbnail")
+async def get_thumbnail(url: str = Query(..., description="Ozon CDN image URL to proxy")):
+    """Proxy a product image from Ozon's CDN.
+
+    Unauthenticated on purpose: ``<img>`` tags cannot send Authorization
+    headers, so requiring a token would break every thumbnail. The images are
+    Ozon's public product photos, and the host allowlist in ``_fetch_image``
+    keeps this endpoint from acting as a generic open proxy.
+    """
+    payload, content_type = await _fetch_image(url)
+    return Response(
+        content=payload,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )

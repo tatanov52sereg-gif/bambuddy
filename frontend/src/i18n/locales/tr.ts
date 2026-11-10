@@ -8563,6 +8563,7 @@ export default {
     searchPlaceholder: 'Ada, ürün koduna veya SKU’ya göre ara',
     noResults: '"{{query}}" ile eşleşen ürün yok.',
     empty: 'Ozon bu hesap için ürün döndürmedi.',
+    noScheme: 'Hesapta {{scheme}} stoğu yok.',
     notConnectedTitle: 'Ozon bağlı değil',
     notConnectedBody: 'Ozon’dan stok çekmek için istemci kimliğinizi ve API anahtarınızı ekleyin.',
     disabledTitle: 'Ozon stoğu kapalı',

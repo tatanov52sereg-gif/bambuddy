@@ -8689,6 +8689,7 @@ export default {
     searchPlaceholder: 'Search by name, article or SKU',
     noResults: 'No products match "{{query}}".',
     empty: 'Ozon returned no products for this account.',
+    noScheme: 'No {{scheme}} stock in the account.',
     notConnectedTitle: 'Ozon is not connected',
     notConnectedBody: 'Add your Client ID and API key to pull stock levels from Ozon.',
     disabledTitle: 'Ozon stock is turned off',

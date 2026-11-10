@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { render } from '../utils';
@@ -96,31 +96,63 @@ describe('OzonPage', () => {
     expect(screen.getByRole('button', { name: 'Open settings' })).toBeInTheDocument();
   });
 
-  it('shows the totals and the warehouse breakdown of a product', async () => {
+  it('shows per-scheme stock and switches between FBO and FBS tabs', async () => {
     server.use(http.get('*/ozon/stocks', () => HttpResponse.json(stocks)));
 
     render(<OzonPage />);
 
+    // Default is the FBO tab: only the product with FBO stock is listed.
     expect(await screen.findByText('Steel bracket')).toBeInTheDocument();
-    expect(screen.getByText('Spool holder')).toBeInTheDocument();
-    expect(screen.getByText('BRACKET-01', { exact: false })).toBeInTheDocument();
-
-    const list = screen.getByRole('list');
-    const rows = within(list).getAllByRole('listitem');
-    expect(rows).toHaveLength(2);
+    expect(screen.queryByText('Spool holder')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'fbo' })).toHaveAttribute('aria-selected', 'true');
 
     await userEvent.click(screen.getByRole('button', { expanded: false, name: /Steel bracket/ }));
-
     expect(await screen.findByText('Main warehouse')).toBeInTheDocument();
-    expect(screen.getByText('Overflow')).toBeInTheDocument();
-    expect(screen.getByText('fbo')).toBeInTheDocument();
+    // The seller's "Overflow" warehouse is FBS, so it must not leak into FBO.
+    expect(screen.queryByText('Overflow')).not.toBeInTheDocument();
 
-    // 10 present, 3 reserved and 7 available are shown in the summary cards and
-    // again in the row; just assert the row's numbers are there.
-    expect(screen.getAllByText('10').length).toBeGreaterThan(0);
+    // Switch to FBS: both products hold FBS stock, and "Main warehouse" is gone.
+    await userEvent.click(screen.getByRole('tab', { name: 'fbs' }));
+    expect(await screen.findByText('Spool holder')).toBeInTheDocument();
+    expect(screen.getByText('Steel bracket')).toBeInTheDocument();
+    expect(screen.queryByText('Main warehouse')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'fbs' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('filters products by article and keeps the search in the URL-free state', async () => {
+  it('shows an empty state for a scheme with no stock', async () => {
+    server.use(
+      http.get('*/ozon/stocks', () =>
+        HttpResponse.json({
+          ...stocks,
+          items: [
+            {
+              product_id: 11,
+              offer_id: 'SPOOL-02',
+              name: 'Spool holder',
+              sku: 900002,
+              image: null,
+              present: 5,
+              reserved: 0,
+              available: 5,
+              warehouses: [
+                { type: 'fbs', warehouse_id: 2, warehouse_name: 'Overflow', present: 5, reserved: 0 },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<OzonPage />);
+
+    // FBO is empty for this account.
+    expect(await screen.findByText(/no fbo stock/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'fbs' }));
+    expect(await screen.findByText('Spool holder')).toBeInTheDocument();
+  });
+
+  it('filters products by article within the active scheme', async () => {
     server.use(http.get('*/ozon/stocks', () => HttpResponse.json(stocks)));
 
     render(<OzonPage />);
@@ -128,7 +160,8 @@ describe('OzonPage', () => {
 
     await userEvent.type(screen.getByPlaceholderText(/search by name/i), 'spool');
 
-    expect(await screen.findByText('Spool holder')).toBeInTheDocument();
+    // "Spool holder" is FBS-only, so on the FBO tab nothing matches.
+    expect(await screen.findByText(/no products match/i)).toBeInTheDocument();
     expect(screen.queryByText('Steel bracket')).not.toBeInTheDocument();
   });
 

@@ -8619,6 +8619,7 @@ export default {
     searchPlaceholder: '依名稱、貨號或 SKU 搜尋',
     noResults: '沒有與「{{query}}」相符的商品。',
     empty: 'Ozon 未回傳此帳戶的商品。',
+    noScheme: '帳戶中沒有 {{scheme}} 庫存。',
     notConnectedTitle: 'Ozon 尚未連線',
     notConnectedBody: '新增用戶端 ID 和 API 金鑰即可取得 Ozon 庫存。',
     disabledTitle: 'Ozon 庫存已關閉',

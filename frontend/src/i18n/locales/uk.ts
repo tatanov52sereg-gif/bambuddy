@@ -8677,6 +8677,7 @@ export default {
     searchPlaceholder: 'Пошук за назвою, артикулом або SKU',
     noResults: 'Немає товарів за запитом «{{query}}».',
     empty: 'Ozon не повернув товарів для цього акаунта.',
+    noScheme: 'В акаунті немає залишків {{scheme}}.',
     notConnectedTitle: 'Ozon не підключено',
     notConnectedBody: 'Додайте Client-ID та API-ключ, щоб отримувати залишки з Ozon.',
     disabledTitle: 'Залишки Ozon вимкнено',

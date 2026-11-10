@@ -8644,6 +8644,7 @@ export default {
     searchPlaceholder: 'Buscar por nombre, artículo o SKU',
     noResults: 'Ningún producto coincide con «{{query}}».',
     empty: 'Ozon no devolvió productos para esta cuenta.',
+    noScheme: 'No hay existencias {{scheme}} en la cuenta.',
     notConnectedTitle: 'Ozon no está conectado',
     notConnectedBody: 'Añade tu ID de cliente y tu clave de API para obtener las existencias de Ozon.',
     disabledTitle: 'Las existencias de Ozon están desactivadas',

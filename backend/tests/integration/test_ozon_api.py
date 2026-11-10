@@ -280,3 +280,71 @@ class TestPaging:
         # once and no third call is made.
         assert [row["product_id"] for row in rows] == [1, 2]
         assert mock.await_count == 2
+
+
+class _FakeImageResponse:
+    def __init__(self, status_code=200, content=b"", content_type="image/jpeg"):
+        self.status_code = status_code
+        self.content = content
+        self.headers = {"content-type": content_type}
+
+
+class _FakeImageClient:
+    def __init__(self, response):
+        self._response = response
+        self.requested_url = None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return False
+
+    async def get(self, url):
+        self.requested_url = url
+        return self._response
+
+
+class TestThumbnail:
+    async def test_rejects_non_ozon_host(self):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            await ozon_module._fetch_image("https://evil.example.com/pic.jpg")
+        assert exc_info.value.status_code == 400
+
+    async def test_rejects_non_image_response(self):
+        from fastapi import HTTPException
+
+        client = _FakeImageClient(_FakeImageResponse(content_type="text/html"))
+        with (
+            patch.object(ozon_module.httpx, "AsyncClient", return_value=client),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await ozon_module._fetch_image("https://ir.ozone.ru/s3/a.jpg")
+        assert exc_info.value.status_code == 502
+
+    async def test_proxies_a_jpeg(self):
+        payload = b"\xff\xd8\xff\xe0fake-jpeg"
+        client = _FakeImageClient(_FakeImageResponse(content=payload))
+        with patch.object(ozon_module.httpx, "AsyncClient", return_value=client):
+            body, content_type = await ozon_module._fetch_image("https://ir.ozone.ru/s3/multimedia/a.jpg")
+        assert body == payload
+        assert content_type == "image/jpeg"
+        assert client.requested_url == "https://ir.ozone.ru/s3/multimedia/a.jpg"
+
+    async def test_derives_mime_from_extension(self):
+        client = _FakeImageClient(_FakeImageResponse(content=b"png", content_type="application/octet-stream"))
+        with patch.object(ozon_module.httpx, "AsyncClient", return_value=client):
+            _, content_type = await ozon_module._fetch_image("https://cdn1.ozone.ru/a.png")
+        assert content_type == "image/png"
+
+    async def test_endpoint_returns_image_and_cache_header(self, async_client: AsyncClient):
+        payload = b"\xff\xd8\xff\xe0jpeg"
+        client = _FakeImageClient(_FakeImageResponse(content=payload))
+        with patch.object(ozon_module.httpx, "AsyncClient", return_value=client):
+            response = await async_client.get("/api/v1/ozon/thumbnail", params={"url": "https://ir.ozone.ru/s3/a.jpg"})
+        assert response.status_code == 200, response.text
+        assert response.content == payload
+        assert response.headers["content-type"].startswith("image/jpeg")
+        assert "max-age=86400" in response.headers["cache-control"]

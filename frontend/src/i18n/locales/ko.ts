@@ -8259,6 +8259,7 @@ export default {
     searchPlaceholder: '이름, 품번 또는 SKU로 검색',
     noResults: '"{{query}}"와 일치하는 상품이 없습니다.',
     empty: '이 계정에 대해 Ozon이 반환한 상품이 없습니다.',
+    noScheme: '계정에 {{scheme}} 재고가 없습니다.',
     notConnectedTitle: 'Ozon이 연결되지 않았습니다',
     notConnectedBody: '클라이언트 ID와 API 키를 입력하면 Ozon 재고를 가져옵니다.',
     disabledTitle: 'Ozon 재고가 꺼져 있습니다',

@@ -8687,6 +8687,7 @@ export default {
     searchPlaceholder: 'Zoeken op naam, artikel of SKU',
     noResults: 'Geen producten gevonden voor "{{query}}".',
     empty: 'Ozon heeft geen producten voor dit account teruggegeven.',
+    noScheme: 'Geen {{scheme}}-voorraad in het account.',
     notConnectedTitle: 'Ozon is niet verbonden',
     notConnectedBody: 'Voeg je client-ID en API-sleutel toe om voorraad van Ozon op te halen.',
     disabledTitle: 'Ozon-voorraad is uitgeschakeld',

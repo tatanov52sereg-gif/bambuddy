@@ -8621,6 +8621,7 @@ export default {
     searchPlaceholder: 'Cerca per nome, articolo o SKU',
     noResults: 'Nessun prodotto corrisponde a «{{query}}».',
     empty: 'Ozon non ha restituito prodotti per questo account.',
+    noScheme: 'Nessuna giacenza {{scheme}} nell\'account.',
     notConnectedTitle: 'Ozon non è connesso',
     notConnectedBody: 'Aggiungi ID cliente e chiave API per recuperare le giacenze da Ozon.',
     disabledTitle: 'Le giacenze Ozon sono disattivate',

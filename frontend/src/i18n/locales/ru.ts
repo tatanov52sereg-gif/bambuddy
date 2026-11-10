@@ -8241,6 +8241,7 @@ export default {
     searchPlaceholder: 'Поиск по названию, артикулу или SKU',
     noResults: 'Нет товаров по запросу «{{query}}».',
     empty: 'Ozon не вернул товары для этого аккаунта.',
+    noScheme: 'В аккаунте нет остатков {{scheme}}.',
     notConnectedTitle: 'Ozon не подключён',
     notConnectedBody: 'Укажите Client-ID и API-ключ, чтобы получать остатки из Ozon.',
     disabledTitle: 'Остатки Ozon отключены',

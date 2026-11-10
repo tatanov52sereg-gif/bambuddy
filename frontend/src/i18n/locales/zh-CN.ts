@@ -1,6 +1,7 @@
 export default {
   // Navigation
   nav: {
+    ozon: 'Ozon 库存',
     printers: '打印机',
     archives: '归档',
     queue: '打印队列',

@@ -1,6 +1,7 @@
 export default {
   // Navigation
   nav: {
+    ozon: 'Stany Ozon',
     printers: 'Drukarki',
     archives: 'Archiwa',
     queue: 'Kolejka druku',

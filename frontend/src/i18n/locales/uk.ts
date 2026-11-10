@@ -1,6 +1,7 @@
 export default {
   // Navigation
   nav: {
+    ozon: 'Залишки Ozon',
     printers: "Принтери",
     archives: "Архіви",
     queue: "Черга друку",

@@ -1,6 +1,7 @@
 export default {
   // Navigation
   nav: {
+    ozon: 'Ozon 在庫',
     printers: 'プリンター',
     archives: 'アーカイブ',
     queue: '印刷キュー',

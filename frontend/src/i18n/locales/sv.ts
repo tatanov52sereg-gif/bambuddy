@@ -1,6 +1,7 @@
 export default {
   // Navigation
   nav: {
+    ozon: 'Ozon-lager',
     printers: 'Skrivare',
     archives: 'Arkiv',
     queue: 'Utskriftskö',

@@ -1,5 +1,6 @@
 export default {
   nav: {
+    ozon: 'Остатки Ozon',
     printers: "Принтеры",
     archives: "Архив",
     queue: "Очередь печати",

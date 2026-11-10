@@ -1,6 +1,7 @@
 export default {
   // Navigasyon
   nav: {
+    ozon: 'Ozon stok',
     printers: 'Yazıcılar',
     archives: 'Arşivler',
     queue: 'Baskı Kuyruğu',

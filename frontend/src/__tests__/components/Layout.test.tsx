@@ -157,6 +157,25 @@ describe('Layout', () => {
       });
     });
 
+    it('translates every sidebar label, including the Ozon page', async () => {
+      // A nav entry whose labelKey is missing from the locale bundle renders the
+      // raw key ("nav.ozon"), which is easy to miss in review: the link works,
+      // it just shows i18n plumbing. Guard the whole sidebar against that.
+      render(<Layout />);
+
+      const ozonLink = await waitFor(() => {
+        const link = document.querySelector('a[href="/ozon"]');
+        expect(link).toBeInTheDocument();
+        return link as HTMLAnchorElement;
+      });
+      expect(ozonLink).toHaveTextContent('Ozon stock');
+
+      const rawKeys = [...document.querySelectorAll('nav a')]
+        .map((link) => (link.textContent ?? '').trim())
+        .filter((text) => /^nav\.[a-zA-Z]+$/.test(text));
+      expect(rawKeys).toEqual([]);
+    });
+
     it('hides system nav items stored in sidebar layout preferences', async () => {
       vi.mocked(localStorage.getItem).mockImplementation((key) => {
         if (key === SIDEBAR_HIDDEN_SYSTEM_ITEMS_KEY) return JSON.stringify(['printers']);

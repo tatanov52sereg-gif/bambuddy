@@ -1,6 +1,7 @@
 export default {
   // Navigation
   nav: {
+    ozon: 'Giacenze Ozon',
     printers: 'Stampanti',
     archives: 'Archivi',
     queue: 'Coda di stampa',

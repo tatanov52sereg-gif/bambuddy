@@ -1,6 +1,7 @@
 export default {
   // Navigation
   nav: {
+    ozon: 'Estoque Ozon',
     printers: 'Impressoras',
     archives: 'Arquivos',
     queue: 'Fila de impressão',

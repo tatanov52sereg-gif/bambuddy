@@ -469,6 +469,7 @@ export function OzonPage() {
                     key={itemKey(row.item)}
                     row={row}
                     locale={i18n.language}
+                    showSchemeSplit={tab === 'all'}
                     expanded={expanded.has(itemKey(row.item))}
                     onToggle={() => toggleExpanded(itemKey(row.item))}
                   />
@@ -534,17 +535,26 @@ function EmptyState({
 function StockRow({
   row,
   locale,
+  showSchemeSplit,
   expanded,
   onToggle,
 }: {
   row: SchemeRow;
   locale: string;
+  showSchemeSplit?: boolean;
   expanded: boolean;
   onToggle: () => void;
 }) {
   const { t } = useTranslation();
   const Chevron = expanded ? ChevronDown : ChevronRight;
   const { item, warehouses, present, reserved, available } = row;
+
+  const fboPresent = warehouses
+    .filter((warehouse) => schemeOf(warehouse) === 'fbo')
+    .reduce((sum, warehouse) => sum + warehouse.present, 0);
+  const fbsPresent = warehouses
+    .filter((warehouse) => schemeOf(warehouse) === 'fbs')
+    .reduce((sum, warehouse) => sum + warehouse.present, 0);
 
   return (
     <li className="border-b border-bambu-dark-tertiary last:border-b-0">
@@ -575,7 +585,11 @@ function StockRow({
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3 md:gap-6 text-right flex-shrink-0">
-          <RowNumber label={t('ozonPage.inStock')} value={present} locale={locale} />
+          {showSchemeSplit ? (
+            <SchemeSplitCell fbo={fboPresent} fbs={fbsPresent} locale={locale} />
+          ) : (
+            <RowNumber label={t('ozonPage.inStock')} value={present} locale={locale} />
+          )}
           <RowNumber label={t('ozonPage.reserved')} value={reserved} locale={locale} />
           <RowNumber label={t('ozonPage.available')} value={available} locale={locale} highlight />
         </div>
@@ -658,6 +672,21 @@ function RowNumber({
         }`}
       >
         {number(value, locale)}
+      </p>
+    </div>
+  );
+}
+
+function SchemeSplitCell({ fbo, fbs, locale }: { fbo: number; fbs: number; locale: string }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wide text-bambu-gray hidden md:block">
+        FBO / FBS
+      </p>
+      <p className="text-sm font-semibold tabular-nums text-white" data-testid="scheme-split">
+        {number(fbo, locale)}
+        <span className="text-bambu-gray font-normal"> / </span>
+        {number(fbs, locale)}
       </p>
     </div>
   );

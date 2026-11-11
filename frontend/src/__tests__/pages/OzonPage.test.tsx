@@ -108,11 +108,21 @@ describe('OzonPage', () => {
     expect(screen.getByText('Spool holder')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
 
+    // The "All" tab replaces "In stock" with an "FBO / FBS" split column.
+    // Sorted by name: Spool holder (FBO 0 / FBS 5), then Steel bracket (7 / 3).
+    expect(screen.getAllByText('FBO / FBS')).toHaveLength(2);
+    const splits = screen.getAllByTestId('scheme-split');
+    expect(splits).toHaveLength(2);
+    expect(splits[0]).toHaveTextContent('0 / 5');
+    expect(splits[1]).toHaveTextContent('7 / 3');
+
     // FBO: only the product with FBO stock, and only its FBO warehouse.
     await userEvent.click(screen.getByRole('tab', { name: 'FBO' }));
     expect(await screen.findByText('Steel bracket')).toBeInTheDocument();
     expect(screen.queryByText('Spool holder')).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'FBO' })).toHaveAttribute('aria-selected', 'true');
+    // The FBO tab keeps the plain "In stock" column, not the split.
+    expect(screen.queryByText('FBO / FBS')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { expanded: false, name: /Steel bracket/ }));
     expect(await screen.findByText('Main warehouse')).toBeInTheDocument();

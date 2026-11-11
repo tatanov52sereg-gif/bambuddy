@@ -8694,6 +8694,7 @@ export default {
     lowProducts: 'Below threshold',
     lowFbo: 'FBO below threshold',
     lowFbs: 'FBS below threshold',
+    lowTotal: 'Total',
     lowEmpty: 'No products are below the threshold.',
     lowNoThreshold: 'Set a low-stock threshold in the connection settings to see products that need restocking.',
     lowBadgeTitle: '{{scheme}}: {{available}} available, threshold {{threshold}}',

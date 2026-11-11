@@ -8624,6 +8624,7 @@ export default {
     lowProducts: '低于阈值',
     lowFbo: 'FBO 低于阈值',
     lowFbs: 'FBS 低于阈值',
+    lowTotal: '合计',
     lowEmpty: '没有低于阈值的商品。',
     lowNoThreshold: '在连接设置中设置低库存阈值，以查看需要补货的商品。',
     lowBadgeTitle: '{{scheme}}: 可用 {{available}}，阈值 {{threshold}}',

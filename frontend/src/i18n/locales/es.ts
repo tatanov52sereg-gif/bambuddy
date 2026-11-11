@@ -8649,6 +8649,7 @@ export default {
     lowProducts: 'Bajo umbral',
     lowFbo: 'FBO bajo umbral',
     lowFbs: 'FBS bajo umbral',
+    lowTotal: 'Total',
     lowEmpty: 'No hay productos bajo el umbral.',
     lowNoThreshold: 'Establece un umbral de stock bajo en los ajustes de conexión para ver los productos que necesitan reposición.',
     lowBadgeTitle: '{{scheme}}: {{available}} disponible, umbral {{threshold}}',

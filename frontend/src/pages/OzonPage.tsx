@@ -666,6 +666,7 @@ function RowNumber({
 function LowStockRow({ entry, locale }: { entry: LowStockEntry; locale: string }) {
   const { t } = useTranslation();
   const { item, fbo, fbs } = entry;
+  const total = (fbo?.available ?? 0) + (fbs?.available ?? 0);
 
   return (
     <li className="border-b border-bambu-dark-tertiary last:border-b-0">
@@ -692,9 +693,21 @@ function LowStockRow({ entry, locale }: { entry: LowStockEntry; locale: string }
         <div className="flex items-center gap-4 md:gap-6 flex-shrink-0">
           <SchemeStockCell label="FBO" stock={fbo} locale={locale} />
           <SchemeStockCell label="FBS" stock={fbs} locale={locale} />
+          <TotalCell label={t('ozonPage.lowTotal')} value={total} locale={locale} />
         </div>
       </div>
     </li>
+  );
+}
+
+function TotalCell({ label, value, locale }: { label: string; value: number; locale: string }) {
+  return (
+    <div className="text-right min-w-[64px]">
+      <p className="text-[10px] uppercase tracking-wide text-bambu-gray">{label}</p>
+      <p data-testid="low-total" className="text-sm font-semibold tabular-nums text-bambu-green">
+        {number(value, locale)}
+      </p>
+    </div>
   );
 }
 

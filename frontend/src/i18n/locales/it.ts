@@ -8626,6 +8626,7 @@ export default {
     lowProducts: 'Sotto soglia',
     lowFbo: 'FBO sotto soglia',
     lowFbs: 'FBS sotto soglia',
+    lowTotal: 'Totale',
     lowEmpty: 'Nessun prodotto sotto la soglia.',
     lowNoThreshold: 'Imposta una soglia di scorte basse nelle impostazioni di connessione per vedere i prodotti da riordinare.',
     lowBadgeTitle: '{{scheme}}: {{available}} disponibili, soglia {{threshold}}',

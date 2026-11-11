@@ -8624,6 +8624,7 @@ export default {
     lowProducts: '低於閾值',
     lowFbo: 'FBO 低於閾值',
     lowFbs: 'FBS 低於閾值',
+    lowTotal: '合計',
     lowEmpty: '沒有低於閾值的商品。',
     lowNoThreshold: '在連線設定中設定低庫存閾值，以查看需要補貨的商品。',
     lowBadgeTitle: '{{scheme}}: 可用 {{available}}，閾值 {{threshold}}',

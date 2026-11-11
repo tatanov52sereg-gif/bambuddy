@@ -8694,6 +8694,7 @@ export default {
     lowProducts: 'Poniżej progu',
     lowFbo: 'FBO poniżej progu',
     lowFbs: 'FBS poniżej progu',
+    lowTotal: 'Łącznie',
     lowEmpty: 'Brak produktów poniżej progu.',
     lowNoThreshold: 'Ustaw próg niskiego stanu w ustawieniach połączenia, aby zobaczyć produkty wymagające uzupełnienia.',
     lowBadgeTitle: '{{scheme}}: dostępne {{available}}, próg {{threshold}}',

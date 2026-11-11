@@ -243,6 +243,13 @@ describe('OzonPage', () => {
     // Each product shows both an FBO and an FBS cell.
     expect(within(list).getAllByText('FBO')).toHaveLength(2);
     expect(within(list).getAllByText('FBS')).toHaveLength(2);
+    // A "Total" column sums both schemes: Steel bracket 5 + 10 = 15, Spool 1.
+    const totals = within(list).getAllByTestId('low-total');
+    expect(totals).toHaveLength(2);
+    // Sorted by name: Spool holder first, then Steel bracket.
+    expect(totals[0]).toHaveTextContent('1');
+    expect(totals[1]).toHaveTextContent('15');
+    expect(within(list).getAllByText('Total')).toHaveLength(2);
   });
 
   it('shows a hint on the low-stock tab when no threshold is set', async () => {

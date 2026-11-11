@@ -8692,6 +8692,7 @@ export default {
     lowProducts: 'Onder drempel',
     lowFbo: 'FBO onder drempel',
     lowFbs: 'FBS onder drempel',
+    lowTotal: 'Totaal',
     lowEmpty: 'Geen producten onder de drempel.',
     lowNoThreshold: 'Stel een drempel voor lage voorraad in bij de verbindingsinstellingen om producten te zien die moeten worden aangevuld.',
     lowBadgeTitle: '{{scheme}}: {{available}} beschikbaar, drempel {{threshold}}',

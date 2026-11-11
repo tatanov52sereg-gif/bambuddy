@@ -8641,6 +8641,7 @@ export default {
     lowProducts: 'Unter Schwelle',
     lowFbo: 'FBO unter Schwelle',
     lowFbs: 'FBS unter Schwelle',
+    lowTotal: 'Gesamt',
     lowEmpty: 'Keine Produkte unter der Schwelle.',
     lowNoThreshold: 'Legen Sie in den Verbindungseinstellungen eine Schwelle für niedrigen Bestand fest, um Produkte zu sehen, die nachbestellt werden müssen.',
     lowBadgeTitle: '{{scheme}}: {{available}} verfügbar, Schwelle {{threshold}}',

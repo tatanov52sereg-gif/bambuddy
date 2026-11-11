@@ -8568,6 +8568,7 @@ export default {
     lowProducts: 'Eşiğin altında',
     lowFbo: 'FBO eşiğin altında',
     lowFbs: 'FBS eşiğin altında',
+    lowTotal: 'Toplam',
     lowEmpty: 'Eşiğin altında ürün yok.',
     lowNoThreshold: 'Yeniden stoklanması gereken ürünleri görmek için bağlantı ayarlarında bir düşük stok eşiği belirleyin.',
     lowBadgeTitle: '{{scheme}}: {{available}} mevcut, eşik {{threshold}}',

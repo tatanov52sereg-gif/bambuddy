@@ -8626,6 +8626,7 @@ export default {
     lowProducts: 'Abaixo do limite',
     lowFbo: 'FBO abaixo do limite',
     lowFbs: 'FBS abaixo do limite',
+    lowTotal: 'Total',
     lowEmpty: 'Nenhum produto abaixo do limite.',
     lowNoThreshold: 'Defina um limite de estoque baixo nas configurações de conexão para ver os produtos que precisam ser repostos.',
     lowBadgeTitle: '{{scheme}}: {{available}} disponível, limite {{threshold}}',

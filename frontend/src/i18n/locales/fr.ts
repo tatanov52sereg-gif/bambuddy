@@ -8627,6 +8627,7 @@ export default {
     lowProducts: 'Sous le seuil',
     lowFbo: 'FBO sous le seuil',
     lowFbs: 'FBS sous le seuil',
+    lowTotal: 'Total',
     lowEmpty: 'Aucun produit sous le seuil.',
     lowNoThreshold: 'Définissez un seuil de stock bas dans les paramètres de connexion pour voir les produits à réapprovisionner.',
     lowBadgeTitle: '{{scheme}}: {{available}} disponible, seuil {{threshold}}',

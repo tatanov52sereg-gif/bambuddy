@@ -8640,6 +8640,7 @@ export default {
     lowProducts: 'しきい値未満',
     lowFbo: 'FBO しきい値未満',
     lowFbs: 'FBS しきい値未満',
+    lowTotal: '合計',
     lowEmpty: 'しきい値未満の商品はありません。',
     lowNoThreshold: '補充が必要な商品を表示するには、接続設定で在庫不足のしきい値を設定してください。',
     lowBadgeTitle: '{{scheme}}: 利用可能 {{available}}、しきい値 {{threshold}}',

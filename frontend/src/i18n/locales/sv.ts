@@ -8690,6 +8690,7 @@ errors: {
     lowProducts: 'Under tröskel',
     lowFbo: 'FBO under tröskel',
     lowFbs: 'FBS under tröskel',
+    lowTotal: 'Totalt',
     lowEmpty: 'Inga produkter under tröskeln.',
     lowNoThreshold: 'Ange en tröskel för lågt lager i anslutningsinställningarna för att se produkter som behöver fyllas på.',
     lowBadgeTitle: '{{scheme}}: {{available}} tillgängligt, tröskel {{threshold}}',

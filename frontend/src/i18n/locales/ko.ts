@@ -8264,6 +8264,7 @@ export default {
     lowProducts: '임계값 미만',
     lowFbo: 'FBO 임계값 미만',
     lowFbs: 'FBS 임계값 미만',
+    lowTotal: '합계',
     lowEmpty: '임계값 미만의 상품이 없습니다.',
     lowNoThreshold: '재입고가 필요한 상품을 보려면 연결 설정에서 재고 부족 임계값을 설정하세요.',
     lowBadgeTitle: '{{scheme}}: 사용 가능 {{available}}, 임계값 {{threshold}}',

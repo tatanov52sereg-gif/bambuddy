@@ -8246,6 +8246,7 @@ export default {
     lowProducts: 'Ниже порога',
     lowFbo: 'FBO ниже порога',
     lowFbs: 'FBS ниже порога',
+    lowTotal: 'Всего',
     lowEmpty: 'Нет товаров ниже порога.',
     lowNoThreshold: 'Задайте порог низкого остатка в настройках подключения, чтобы видеть товары, которые пора пополнить.',
     lowBadgeTitle: '{{scheme}}: доступно {{available}}, порог {{threshold}}',

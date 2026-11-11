@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { render } from '../utils';
@@ -178,13 +178,48 @@ describe('OzonPage', () => {
     expect(screen.queryByText('Steel bracket')).not.toBeInTheDocument();
   });
 
-  it('lists products below the per-scheme threshold on the low-stock tab', async () => {
+  it('lists products below the per-scheme threshold and shows both scheme totals', async () => {
     server.use(
       http.get('*/ozon/stocks', () =>
         HttpResponse.json({
-          ...stocks,
+          configured: true,
+          enabled: true,
+          cached: false,
+          fetched_at: '2026-11-10T10:00:00Z',
+          total_products: 2,
+          total_present: 18,
+          total_reserved: 2,
           low_stock_threshold_fbo: 6,
           low_stock_threshold_fbs: 3,
+          items: [
+            {
+              product_id: 10,
+              offer_id: 'BRACKET-01',
+              name: 'Steel bracket',
+              sku: 900001,
+              image: null,
+              present: 17,
+              reserved: 2,
+              available: 15,
+              warehouses: [
+                { type: 'fbo', warehouse_id: 1, warehouse_name: 'Main', present: 7, reserved: 2 },
+                { type: 'fbs', warehouse_id: 2, warehouse_name: 'Overflow', present: 10, reserved: 0 },
+              ],
+            },
+            {
+              product_id: 11,
+              offer_id: 'SPOOL-02',
+              name: 'Spool holder',
+              sku: 900002,
+              image: null,
+              present: 1,
+              reserved: 0,
+              available: 1,
+              warehouses: [
+                { type: 'fbs', warehouse_id: 2, warehouse_name: 'Overflow', present: 1, reserved: 0 },
+              ],
+            },
+          ],
         }),
       ),
     );
@@ -194,13 +229,20 @@ describe('OzonPage', () => {
     await screen.findByRole('tab', { name: 'All' });
     await userEvent.click(screen.getByRole('tab', { name: 'Low stock' }));
 
-    // Steel bracket: FBO available 5 < 6, FBS available 2 < 3 — low in both.
+    // Both products are below threshold in at least one scheme.
     expect(await screen.findByText('Steel bracket')).toBeInTheDocument();
-    expect(screen.getByText('FBO: 5 < 6')).toBeInTheDocument();
-    expect(screen.getByText('FBS: 2 < 3')).toBeInTheDocument();
+    expect(screen.getByText('Spool holder')).toBeInTheDocument();
 
-    // Spool holder: FBS available 5 >= 3 — not below threshold.
-    expect(screen.queryByText('Spool holder')).not.toBeInTheDocument();
+    const list = screen.getByRole('list');
+    // Steel bracket: FBO 5 < 6 (low, via its tooltip) and FBS 10 (fine) —
+    // both totals are shown, only the low one flagged.
+    expect(within(list).getByTitle('FBO: 5 available, threshold 6')).toBeInTheDocument();
+    expect(within(list).getByText('10')).toBeInTheDocument();
+    // Spool holder: FBS 1 < 3 (low), and no FBO stock (shown as "—").
+    expect(within(list).getByTitle('FBS: 1 available, threshold 3')).toBeInTheDocument();
+    // Each product shows both an FBO and an FBS cell.
+    expect(within(list).getAllByText('FBO')).toHaveLength(2);
+    expect(within(list).getAllByText('FBS')).toHaveLength(2);
   });
 
   it('shows a hint on the low-stock tab when no threshold is set', async () => {

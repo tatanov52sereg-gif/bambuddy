@@ -80,7 +80,14 @@ interface SchemeRow {
 
 interface LowStockEntry {
   item: OzonStockItem;
-  schemes: { scheme: Scheme; available: number; threshold: number }[];
+  fbo: SchemeStock | null;
+  fbs: SchemeStock | null;
+}
+
+interface SchemeStock {
+  available: number;
+  threshold: number;
+  low: boolean;
 }
 
 function buildRows(items: OzonStockItem[], tab: TabId): SchemeRow[] {
@@ -98,30 +105,37 @@ function buildRows(items: OzonStockItem[], tab: TabId): SchemeRow[] {
   return rows;
 }
 
+function schemeStock(item: OzonStockItem, scheme: Scheme, threshold: number): SchemeStock | null {
+  const warehouses = item.warehouses.filter((warehouse) => schemeOf(warehouse) === scheme);
+  // A product that is not sold via this scheme at all (no warehouse rows) is
+  // reported as null: zero stock here means "absent", not "running out".
+  if (warehouses.length === 0) return null;
+  const present = warehouses.reduce((sum, warehouse) => sum + warehouse.present, 0);
+  const reserved = warehouses.reduce((sum, warehouse) => sum + warehouse.reserved, 0);
+  const available = Math.max(present - reserved, 0);
+  return { available, threshold, low: threshold > 0 && available < threshold };
+}
+
 function buildLowRows(
   items: OzonStockItem[],
   thresholds: { fbo: number; fbs: number },
 ): LowStockEntry[] {
   const entries: LowStockEntry[] = [];
   for (const item of items) {
-    const schemes: LowStockEntry['schemes'] = [];
-    for (const scheme of ['fbo', 'fbs'] as Scheme[]) {
-      const threshold = thresholds[scheme];
-      if (threshold <= 0) continue;
-      const warehouses = item.warehouses.filter((warehouse) => schemeOf(warehouse) === scheme);
-      // A product that is not sold via this scheme at all (no warehouse rows)
-      // must not be flagged as low: zero is not "running out", it is "absent".
-      if (warehouses.length === 0) continue;
-      const present = warehouses.reduce((sum, warehouse) => sum + warehouse.present, 0);
-      const reserved = warehouses.reduce((sum, warehouse) => sum + warehouse.reserved, 0);
-      const available = Math.max(present - reserved, 0);
-      if (available < threshold) {
-        schemes.push({ scheme, available, threshold });
-      }
+    const fbo = schemeStock(item, 'fbo', thresholds.fbo);
+    const fbs = schemeStock(item, 'fbs', thresholds.fbs);
+    if (fbo?.low || fbs?.low) {
+      entries.push({ item, fbo, fbs });
     }
-    if (schemes.length > 0) entries.push({ item, schemes });
   }
   return entries;
+}
+
+function entryMinAvailable(entry: LowStockEntry): number {
+  const values: number[] = [];
+  if (entry.fbo?.low) values.push(entry.fbo.available);
+  if (entry.fbs?.low) values.push(entry.fbs.available);
+  return values.length ? Math.min(...values) : Infinity;
 }
 
 export function OzonPage() {
@@ -189,12 +203,10 @@ export function OzonPage() {
   }, [rows]);
 
   const lowSummary = useMemo(() => {
-    const hasScheme = (entry: LowStockEntry, scheme: Scheme) =>
-      entry.schemes.some((row) => row.scheme === scheme);
     return {
       products: lowRows.length,
-      fbo: lowRows.filter((entry) => hasScheme(entry, 'fbo')).length,
-      fbs: lowRows.filter((entry) => hasScheme(entry, 'fbs')).length,
+      fbo: lowRows.filter((entry) => entry.fbo?.low).length,
+      fbs: lowRows.filter((entry) => entry.fbs?.low).length,
     };
   }, [lowRows]);
 
@@ -233,8 +245,8 @@ export function OzonPage() {
 
     return [...filtered].sort((a, b) => {
       if (sortByStock) {
-        const aMin = Math.min(...a.schemes.map((row) => row.available));
-        const bMin = Math.min(...b.schemes.map((row) => row.available));
+        const aMin = entryMinAvailable(a);
+        const bMin = entryMinAvailable(b);
         if (aMin !== bMin) return aMin - bMin;
       }
       return a.item.name.localeCompare(b.item.name, i18n.language, {
@@ -653,7 +665,7 @@ function RowNumber({
 
 function LowStockRow({ entry, locale }: { entry: LowStockEntry; locale: string }) {
   const { t } = useTranslation();
-  const { item, schemes } = entry;
+  const { item, fbo, fbs } = entry;
 
   return (
     <li className="border-b border-bambu-dark-tertiary last:border-b-0">
@@ -677,24 +689,59 @@ function LowStockRow({ entry, locale }: { entry: LowStockEntry; locale: string }
             {item.sku !== null && ` · SKU ${item.sku}`}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 justify-end flex-shrink-0">
-          {schemes.map((row) => (
-            <span
-              key={row.scheme}
-              title={t('ozonPage.lowBadgeTitle', {
-                scheme: row.scheme.toUpperCase(),
-                available: number(row.available, locale),
-                threshold: number(row.threshold, locale),
-              })}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/15 border border-red-500/40 text-red-400 text-xs font-medium"
-            >
-              {row.scheme.toUpperCase()}: {number(row.available, locale)} &lt;{' '}
-              {number(row.threshold, locale)}
-            </span>
-          ))}
+        <div className="flex items-center gap-4 md:gap-6 flex-shrink-0">
+          <SchemeStockCell label="FBO" stock={fbo} locale={locale} />
+          <SchemeStockCell label="FBS" stock={fbs} locale={locale} />
         </div>
       </div>
     </li>
+  );
+}
+
+function SchemeStockCell({
+  label,
+  stock,
+  locale,
+}: {
+  label: string;
+  stock: SchemeStock | null;
+  locale: string;
+}) {
+  const { t } = useTranslation();
+
+  if (stock === null) {
+    return (
+      <div className="text-right min-w-[64px]">
+        <p className="text-[10px] uppercase tracking-wide text-bambu-gray">{label}</p>
+        <p className="text-sm text-bambu-gray">—</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-right min-w-[64px]">
+      <p className="text-[10px] uppercase tracking-wide text-bambu-gray">{label}</p>
+      <p
+        className={`text-sm font-semibold tabular-nums ${stock.low ? 'text-red-400' : 'text-white'}`}
+        title={
+          stock.low
+            ? t('ozonPage.lowBadgeTitle', {
+                scheme: label,
+                available: number(stock.available, locale),
+                threshold: number(stock.threshold, locale),
+              })
+            : undefined
+        }
+      >
+        {number(stock.available, locale)}
+        {stock.low && (
+          <span className="text-red-400">
+            {' '}
+            &lt; {number(stock.threshold, locale)}
+          </span>
+        )}
+      </p>
+    </div>
   );
 }
 

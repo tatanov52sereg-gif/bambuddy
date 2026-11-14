@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { api, type PrinterStatus } from '../../api/client';
 import { getColorName } from '../../utils/colors';
-import { isGcodeCompatible } from '../../utils/printer';
+import { comparePrinterNames, isGcodeCompatible } from '../../utils/printer';
 import {
   normalizeColorForCompare,
   colorsAreSimilar,
@@ -238,8 +238,14 @@ export function PrinterSelector({
   // State for showing all printers vs only matching model
   const [showAllPrinters, setShowAllPrinters] = useState(false);
 
-  // Filter printers based on showInactive flag
-  const activePrinters = showInactive ? printers : printers.filter((p) => p.is_active);
+  // Filter printers based on showInactive flag, then order them by name the
+  // way the Printers page does. The API sorts by `name` in the database, which
+  // compares character by character, so "A-1-10" would land between "A-1-1"
+  // and "A-1-2" — right where a farm operator does not expect to find it.
+  const activePrinters = useMemo(() => {
+    const list = showInactive ? printers : printers.filter((p) => p.is_active);
+    return [...list].sort((a, b) => comparePrinterNames(a.name, b.name));
+  }, [printers, showInactive]);
 
   // Fetch printer statuses to determine busy/idle state
   const statusQueries = useQueries({

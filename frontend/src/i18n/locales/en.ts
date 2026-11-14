@@ -8686,6 +8686,8 @@ export default {
     inStock: 'In stock',
     reserved: 'Reserved',
     available: 'Available',
+    sortBy: 'Sort by',
+    sortQuantity: 'Quantity',
     searchPlaceholder: 'Search by name, article or SKU',
     noResults: 'No products match "{{query}}".',
     empty: 'Ozon returned no products for this account.',

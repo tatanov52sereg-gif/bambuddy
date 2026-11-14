@@ -8632,6 +8632,8 @@ export default {
     inStock: '在庫あり',
     reserved: '予約済み',
     available: '販売可能',
+    sortBy: '並び替え',
+    sortQuantity: '数量',
     searchPlaceholder: '商品名・品番・SKU で検索',
     noResults: '「{{query}}」に一致する商品はありません。',
     empty: 'このアカウントの商品は Ozon から返されませんでした。',

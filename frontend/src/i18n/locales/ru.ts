@@ -8238,6 +8238,8 @@ export default {
     inStock: 'На складе',
     reserved: 'Зарезервировано',
     available: 'Доступно',
+    sortBy: 'Сортировка',
+    sortQuantity: 'Количество',
     searchPlaceholder: 'Поиск по названию, артикулу или SKU',
     noResults: 'Нет товаров по запросу «{{query}}».',
     empty: 'Ozon не вернул товары для этого аккаунта.',

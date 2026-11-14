@@ -8618,6 +8618,8 @@ export default {
     inStock: 'A magazzino',
     reserved: 'Riservato',
     available: 'Disponibile',
+    sortBy: 'Ordina per',
+    sortQuantity: 'Quantità',
     searchPlaceholder: 'Cerca per nome, articolo o SKU',
     noResults: 'Nessun prodotto corrisponde a «{{query}}».',
     empty: 'Ozon non ha restituito prodotti per questo account.',

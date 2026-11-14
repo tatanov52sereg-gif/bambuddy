@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   ChevronRight,
   Loader2,
@@ -55,7 +57,17 @@ function number(value: number, locale: string): string {
 type Scheme = 'fbo' | 'fbs';
 type TabId = 'all' | Scheme | 'low';
 
+// Sorting is available on every tab: by name, or by the quantity the tab is
+// about (a scheme's available stock, or FBO+FBS on the low tab). The arrow
+// only flips the quantity order; name always reads A→Z so the list never
+// looks scrambled after playing with the direction.
+type SortField = 'name' | 'quantity';
+
 const TABS: TabId[] = ['all', 'fbo', 'fbs', 'low'];
+
+function compareNames(a: string, b: string, locale: string): number {
+  return a.localeCompare(b, locale, { numeric: true, sensitivity: 'base' });
+}
 
 // Everything that is not Ozon's own storage ("fbo") is seller-side: an account
 // using crossborder/realFBS still lands under the FBS tab instead of vanishing.
@@ -131,11 +143,11 @@ function buildLowRows(
   return entries;
 }
 
-function entryMinAvailable(entry: LowStockEntry): number {
-  const values: number[] = [];
-  if (entry.fbo?.low) values.push(entry.fbo.available);
-  if (entry.fbs?.low) values.push(entry.fbs.available);
-  return values.length ? Math.min(...values) : Infinity;
+// What the quantity sort ranks by: the stock the row is actually about. On
+// the low tab that is the product's whole remaining stock (both schemes
+// together), matching the "Total" column; elsewhere it is what the tab shows.
+function entryTotalAvailable(entry: LowStockEntry): number {
+  return (entry.fbo?.available ?? 0) + (entry.fbs?.available ?? 0);
 }
 
 export function OzonPage() {
@@ -145,7 +157,10 @@ export function OzonPage() {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
-  const [sortByStock, setSortByStock] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('name');
+  // Most stock first: the point of sorting by quantity is spotting what is
+  // plentiful before scrolling. The arrow flips it for the other question.
+  const [sortAsc, setSortAsc] = useState(false);
   const [tab, setTab] = useState<TabId>('all');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -223,13 +238,13 @@ export function OzonPage() {
       : rows;
 
     return [...filtered].sort((a, b) => {
-      if (sortByStock && a.available !== b.available) return b.available - a.available;
-      return a.item.name.localeCompare(b.item.name, i18n.language, {
-        numeric: true,
-        sensitivity: 'base',
-      });
+      if (sortField === 'quantity') {
+        const diff = a.available - b.available;
+        if (diff !== 0) return sortAsc ? diff : -diff;
+      }
+      return compareNames(a.item.name, b.item.name, i18n.language);
     });
-  }, [rows, search, sortByStock, i18n.language]);
+  }, [rows, search, sortField, sortAsc, i18n.language]);
 
   const visibleLowRows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -244,17 +259,13 @@ export function OzonPage() {
       : lowRows;
 
     return [...filtered].sort((a, b) => {
-      if (sortByStock) {
-        const aMin = entryMinAvailable(a);
-        const bMin = entryMinAvailable(b);
-        if (aMin !== bMin) return aMin - bMin;
+      if (sortField === 'quantity') {
+        const diff = entryTotalAvailable(a) - entryTotalAvailable(b);
+        if (diff !== 0) return sortAsc ? diff : -diff;
       }
-      return a.item.name.localeCompare(b.item.name, i18n.language, {
-        numeric: true,
-        sensitivity: 'base',
-      });
+      return compareNames(a.item.name, b.item.name, i18n.language);
     });
-  }, [lowRows, search, sortByStock, i18n.language]);
+  }, [lowRows, search, sortField, sortAsc, i18n.language]);
 
   const toggleExpanded = (key: string) => {
     setExpanded((current) => {
@@ -412,13 +423,34 @@ export function OzonPage() {
                   {data.cached ? ` (${t('ozonPage.cached')})` : ''}
                 </span>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSortByStock((current) => !current)}
-              >
-                {sortByStock ? t('ozonPage.available') : t('common.name')}
-              </Button>
+              <div className="flex items-center gap-1">
+                <label className="sr-only" htmlFor="ozon-sort-field">
+                  {t('ozonPage.sortBy')}
+                </label>
+                <select
+                  id="ozon-sort-field"
+                  value={sortField}
+                  onChange={(e) => setSortField(e.target.value as SortField)}
+                  className="h-8 px-2 rounded-lg border bg-bambu-dark border-bambu-dark-tertiary text-white text-sm font-medium transition-colors cursor-pointer hover:bg-bambu-dark-tertiary focus:outline-none focus:border-bambu-green"
+                >
+                  <option value="name">{t('common.name')}</option>
+                  <option value="quantity">{t('ozonPage.sortQuantity')}</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setSortAsc((current) => !current)}
+                  disabled={sortField === 'name'}
+                  className="h-8 shrink-0 px-2 rounded-lg border bg-bambu-dark border-bambu-dark-tertiary text-white hover:bg-bambu-dark-tertiary transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={
+                    sortAsc ? t('printers.sort.ascending') : t('printers.sort.descending')
+                  }
+                  aria-label={
+                    sortAsc ? t('printers.sort.ascending') : t('printers.sort.descending')
+                  }
+                >
+                  {sortAsc ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
 

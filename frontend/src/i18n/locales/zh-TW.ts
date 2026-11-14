@@ -8616,6 +8616,8 @@ export default {
     inStock: '有庫存',
     reserved: '已預留',
     available: '可售',
+    sortBy: '排序方式',
+    sortQuantity: '數量',
     searchPlaceholder: '依名稱、貨號或 SKU 搜尋',
     noResults: '沒有與「{{query}}」相符的商品。',
     empty: 'Ozon 未回傳此帳戶的商品。',

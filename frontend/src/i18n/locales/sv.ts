@@ -8682,6 +8682,8 @@ errors: {
     inStock: 'I lager',
     reserved: 'Reserverat',
     available: 'Tillgängligt',
+    sortBy: 'Sortera efter',
+    sortQuantity: 'Antal',
     searchPlaceholder: 'Sök på namn, artikel eller SKU',
     noResults: 'Inga produkter matchar "{{query}}".',
     empty: 'Ozon returnerade inga produkter för det här kontot.',

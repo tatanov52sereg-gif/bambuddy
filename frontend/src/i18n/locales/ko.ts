@@ -8256,6 +8256,8 @@ export default {
     inStock: '재고 있음',
     reserved: '예약됨',
     available: '판매 가능',
+    sortBy: '정렬 기준',
+    sortQuantity: '수량',
     searchPlaceholder: '이름, 품번 또는 SKU로 검색',
     noResults: '"{{query}}"와 일치하는 상품이 없습니다.',
     empty: '이 계정에 대해 Ozon이 반환한 상품이 없습니다.',

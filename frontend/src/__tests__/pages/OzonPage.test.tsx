@@ -73,6 +73,47 @@ const stocks = {
   ],
 };
 
+const lowStocks = {
+  configured: true,
+  enabled: true,
+  cached: false,
+  fetched_at: '2026-11-10T10:00:00Z',
+  total_products: 2,
+  total_present: 18,
+  total_reserved: 2,
+  low_stock_threshold_fbo: 6,
+  low_stock_threshold_fbs: 3,
+  items: [
+    {
+      product_id: 10,
+      offer_id: 'BRACKET-01',
+      name: 'Steel bracket',
+      sku: 900001,
+      image: null,
+      present: 17,
+      reserved: 2,
+      available: 15,
+      warehouses: [
+        { type: 'fbo', warehouse_id: 1, warehouse_name: 'Main', present: 7, reserved: 2 },
+        { type: 'fbs', warehouse_id: 2, warehouse_name: 'Overflow', present: 10, reserved: 0 },
+      ],
+    },
+    {
+      product_id: 11,
+      offer_id: 'SPOOL-02',
+      name: 'Spool holder',
+      sku: 900002,
+      image: null,
+      present: 1,
+      reserved: 0,
+      available: 1,
+      warehouses: [
+        { type: 'fbs', warehouse_id: 2, warehouse_name: 'Overflow', present: 1, reserved: 0 },
+      ],
+    },
+  ],
+};
+
 afterEach(() => server.resetHandlers());
 
 describe('OzonPage', () => {
@@ -137,6 +178,66 @@ describe('OzonPage', () => {
     expect(screen.getByRole('tab', { name: 'FBS' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('sorts the All, FBO and FBS tabs by quantity in both directions', async () => {
+    server.use(http.get('*/ozon/stocks', () => HttpResponse.json(stocks)));
+
+    render(<OzonPage />);
+    await screen.findByText('Steel bracket');
+
+    const order = () =>
+      screen
+        .getAllByText(/^(Steel bracket|Spool holder)$/)
+        .map((node) => node.textContent);
+
+    // Names sort A→Z by default: Spool holder, Steel bracket.
+    expect(order()).toEqual(['Spool holder', 'Steel bracket']);
+
+    const sortSelect = screen.getByLabelText('Sort by');
+    // The direction arrow only applies to quantity, so it starts disabled.
+    expect(screen.getByRole('button', { name: 'Sort descending' })).toBeDisabled();
+
+    // All tab: 7 available vs 5 — biggest first by default.
+    await userEvent.selectOptions(sortSelect, 'quantity');
+    expect(order()).toEqual(['Steel bracket', 'Spool holder']);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sort descending' }));
+    expect(order()).toEqual(['Spool holder', 'Steel bracket']);
+
+    // The direction survives a tab switch, and FBS ranks by FBS stock only:
+    // Steel bracket has 2 on FBS (3 present − 1 reserved), Spool holder 5.
+    await userEvent.click(screen.getByRole('tab', { name: 'FBS' }));
+    expect(await screen.findByText('Spool holder')).toBeInTheDocument();
+    expect(order()).toEqual(['Steel bracket', 'Spool holder']);
+
+    await userEvent.click(screen.getByRole('tab', { name: 'FBO' }));
+    expect(await screen.findByText('Steel bracket')).toBeInTheDocument();
+    // Sorting stays available on the single-scheme tab.
+    expect(screen.getByLabelText('Sort by')).toHaveValue('quantity');
+    expect(screen.getByRole('button', { name: 'Sort ascending' })).toBeInTheDocument();
+  });
+
+  it('sorts the low-stock tab by the combined FBO+FBS quantity', async () => {
+    server.use(http.get('*/ozon/stocks', () => HttpResponse.json(lowStocks)));
+
+    render(<OzonPage />);
+    await screen.findByRole('tab', { name: 'All' });
+    await userEvent.click(screen.getByRole('tab', { name: 'Low stock' }));
+    await screen.findByText('Steel bracket');
+
+    const totals = () =>
+      screen.getAllByTestId('low-total').map((node) => node.textContent);
+
+    // By name first: Spool holder (total 1), then Steel bracket (total 15).
+    expect(totals()).toEqual(['1', '15']);
+
+    await userEvent.selectOptions(screen.getByLabelText('Sort by'), 'quantity');
+    // Biggest total first.
+    expect(totals()).toEqual(['15', '1']);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sort descending' }));
+    expect(totals()).toEqual(['1', '15']);
+  });
+
   it('shows an empty state for a scheme with no stock', async () => {
     server.use(
       http.get('*/ozon/stocks', () =>
@@ -189,50 +290,7 @@ describe('OzonPage', () => {
   });
 
   it('lists products below the per-scheme threshold and shows both scheme totals', async () => {
-    server.use(
-      http.get('*/ozon/stocks', () =>
-        HttpResponse.json({
-          configured: true,
-          enabled: true,
-          cached: false,
-          fetched_at: '2026-11-10T10:00:00Z',
-          total_products: 2,
-          total_present: 18,
-          total_reserved: 2,
-          low_stock_threshold_fbo: 6,
-          low_stock_threshold_fbs: 3,
-          items: [
-            {
-              product_id: 10,
-              offer_id: 'BRACKET-01',
-              name: 'Steel bracket',
-              sku: 900001,
-              image: null,
-              present: 17,
-              reserved: 2,
-              available: 15,
-              warehouses: [
-                { type: 'fbo', warehouse_id: 1, warehouse_name: 'Main', present: 7, reserved: 2 },
-                { type: 'fbs', warehouse_id: 2, warehouse_name: 'Overflow', present: 10, reserved: 0 },
-              ],
-            },
-            {
-              product_id: 11,
-              offer_id: 'SPOOL-02',
-              name: 'Spool holder',
-              sku: 900002,
-              image: null,
-              present: 1,
-              reserved: 0,
-              available: 1,
-              warehouses: [
-                { type: 'fbs', warehouse_id: 2, warehouse_name: 'Overflow', present: 1, reserved: 0 },
-              ],
-            },
-          ],
-        }),
-      ),
-    );
+    server.use(http.get('*/ozon/stocks', () => HttpResponse.json(lowStocks)));
 
     render(<OzonPage />);
 

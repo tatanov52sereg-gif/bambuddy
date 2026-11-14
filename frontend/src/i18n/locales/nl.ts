@@ -8684,6 +8684,8 @@ export default {
     inStock: 'Op voorraad',
     reserved: 'Gereserveerd',
     available: 'Beschikbaar',
+    sortBy: 'Sorteren op',
+    sortQuantity: 'Aantal',
     searchPlaceholder: 'Zoeken op naam, artikel of SKU',
     noResults: 'Geen producten gevonden voor "{{query}}".',
     empty: 'Ozon heeft geen producten voor dit account teruggegeven.',

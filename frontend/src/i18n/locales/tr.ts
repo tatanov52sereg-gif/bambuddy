@@ -8560,6 +8560,8 @@ export default {
     inStock: 'Stokta',
     reserved: 'Rezerve',
     available: 'Kullanılabilir',
+    sortBy: 'Sıralama ölçütü',
+    sortQuantity: 'Adet',
     searchPlaceholder: 'Ada, ürün koduna veya SKU’ya göre ara',
     noResults: '"{{query}}" ile eşleşen ürün yok.',
     empty: 'Ozon bu hesap için ürün döndürmedi.',

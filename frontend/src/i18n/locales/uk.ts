@@ -8674,6 +8674,8 @@ export default {
     inStock: 'На складі',
     reserved: 'Зарезервовано',
     available: 'Доступно',
+    sortBy: 'Сортувати за',
+    sortQuantity: 'Кількість',
     searchPlaceholder: 'Пошук за назвою, артикулом або SKU',
     noResults: 'Немає товарів за запитом «{{query}}».',
     empty: 'Ozon не повернув товарів для цього акаунта.',
